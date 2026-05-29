@@ -4,15 +4,25 @@ import { DIFF } from "../data/difficulty.js";
 import { Pill } from "./widgets.jsx";
 import { miniBtn } from "../styles.js";
 
+const mmss = (t) => { const s = Math.max(0, Math.ceil(t)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+
 export default function Hud({ hud, diamonds, paused, onMenu, onPause, onStats, onDex }) {
+  const survival = hud.mode === "survival";
   return (
     <div style={{ padding: "8px 10px 6px", flexShrink: 0 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 5 }}>
         <button onClick={onMenu} style={{ ...miniBtn, minWidth: 32 }}>‹</button>
-        <Pill label="波次" v={hud.wave} c="#67e8f9" />
+        {survival ? (
+          <>
+            <Pill label="⏱時間" v={mmss(hud.timeLeft)} c="#f43f5e" />
+            <Pill label="☠擊殺" v={hud.kills} c="#fca5a5" />
+          </>
+        ) : (
+          <Pill label="波次" v={hud.wave} c="#67e8f9" />
+        )}
         <Pill label="🪙金幣" v={hud.gold.toLocaleString()} c="#fcd34d" />
         <Pill label="💎鑽石" v={diamonds.toLocaleString()} c="#67e8f9" />
-        <Pill label="難度" v={DIFF[hud.diff].name} c={DIFF[hud.diff].col} />
+        {!survival && <Pill label="難度" v={DIFF[hud.diff].name} c={DIFF[hud.diff].col} />}
         <button onClick={onStats} style={{ ...miniBtn, minWidth: 32 }}>📊</button>
         <button onClick={onDex} style={{ ...miniBtn, minWidth: 32 }}>👾</button>
         <button onClick={onPause} style={{ ...miniBtn, minWidth: 32 }}>{paused ? "▶" : "❚❚"}</button>

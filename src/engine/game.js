@@ -4,21 +4,36 @@
 import { DIFF } from "../data/difficulty.js";
 import { CFG, WORLD } from "../data/tuning.js";
 import { ENEMIES, pickType } from "../data/enemies.js";
+import { SURVIVAL_SECONDS } from "../data/modes.js";
 
 // 建立一場新遊戲的狀態物件。
-export function createRun(diffKey, stats) {
+// opts: { mode, startWave, startGold, survivalStrength }
+export function createRun(diffKey, stats, opts = {}) {
+  const mode = opts.mode || "classic";
   const g = {
-    gold: 50, maxHp: stats.maxHp, hp: stats.maxHp,
-    diff: DIFF[diffKey], diffKey,
+    gold: opts.startGold ?? 50, maxHp: stats.maxHp, hp: stats.maxHp,
+    diff: DIFF[diffKey], diffKey, mode,
     wave: 1, waveActive: true, spawnQueue: 0, spawnTimer: 0, cooldown: 0, immortalUsed: false,
     enemies: [], bullets: [], beams: [], particles: [], fx: [],
     eid: 0, fireCd: 0, orbAngle: 0,
     buffs: { over: 0, frost: 0 },
     cds: { over: 0, nova: 0, frost: 0, repair: 0 },
     gameOver: false, t: 0,
+    kills: 0,
+    survivalTime: mode === "survival" ? SURVIVAL_SECONDS : 0,
+    survivalStrength: Math.max(1, opts.survivalStrength || 1),
+    bossTimer: 12,
   };
-  startWave(g, 1);
+  if (mode === "survival") { g.wave = g.survivalStrength; g.waveActive = true; g.spawnTimer = 0.6; }
+  else startWave(g, opts.startWave || 1);
   return g;
+}
+
+// 續戰模式：結算「從第 1 波到第 (startWave-1) 波」累積的金幣（含起始 50）。
+export function cumulativeWaveGold(startWave, diff) {
+  let g = 50;
+  for (let w = 1; w < startWave; w++) g += (CFG.waveGoldBase + w * CFG.waveGoldSlope) * diff.gold;
+  return Math.floor(g);
 }
 
 export function startWave(g, num) {
@@ -57,6 +72,7 @@ export function spawnMini(g, x, y, n) {
 }
 
 export function killEnemy(g, s, e, idx) {
+  g.kills = (g.kills || 0) + 1;
   g.gold += Math.floor(e.rw * g.diff.gold * s.goldMult);
   if (s.lifesteal > 0) g.hp = Math.min(g.maxHp, g.hp + g.maxHp * 0.004);
   burst(g, e.x, e.y, e.col, e.type === "boss" ? 22 : 9);

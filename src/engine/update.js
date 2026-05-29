@@ -4,6 +4,7 @@
 import { CFG, WORLD } from "../data/tuning.js";
 import { WEAPONS } from "../data/weapons.js";
 import { ABILITIES } from "../data/skills.js";
+import { SURVIVAL_SECONDS } from "../data/modes.js";
 import { CRIT_MULT } from "./stats.js";
 import { spawnEnemy, startWave, killEnemy, burst, ringFx, damageEnemy, mitigate, mitigateDot, chainHit } from "./game.js";
 
@@ -22,23 +23,35 @@ export function stepGame(g, s, dt, weaponKey, io) {
   if (g.buffs.over > 0) g.buffs.over -= dt;
   if (g.buffs.frost > 0) g.buffs.frost -= dt;
 
-  // 生成 / 波次節奏
-  if (g.waveActive && g.spawnQueue > 0) {
-    g.spawnTimer -= dt;
+  // 生成 / 波次節奏（依模式）
+  if (g.mode === "survival") {
+    // 無限生存：以固定強度持續猛攻，並隨時間越來越密集；時間到即結束。
+    g.survivalTime -= dt; g.spawnTimer -= dt; g.bossTimer -= dt;
     if (g.spawnTimer <= 0) {
-      const boss = g.spawnQueue === 1 && g.wave % 5 === 0;
-      spawnEnemy(g, boss ? "boss" : null);
-      g.spawnQueue--;
-      g.spawnTimer = Math.max(0.16, 0.65 - g.wave * 0.01);
+      const elapsed = SURVIVAL_SECONDS - g.survivalTime;
+      if (g.bossTimer <= 0) { spawnEnemy(g, "boss"); g.bossTimer = 20; }
+      else spawnEnemy(g, null);
+      g.spawnTimer = Math.max(0.12, 0.55 - elapsed * 0.0012);
     }
+    if (g.survivalTime <= 0) { g.survivalTime = 0; endRun(g, s, io); }
+  } else {
+    if (g.waveActive && g.spawnQueue > 0) {
+      g.spawnTimer -= dt;
+      if (g.spawnTimer <= 0) {
+        const boss = g.spawnQueue === 1 && g.wave % 5 === 0;
+        spawnEnemy(g, boss ? "boss" : null);
+        g.spawnQueue--;
+        g.spawnTimer = Math.max(0.16, 0.65 - g.wave * 0.01);
+      }
+    }
+    if (g.waveActive && g.spawnQueue === 0 && g.enemies.length === 0) {
+      g.waveActive = false; g.cooldown = 1.4;
+      io.reportWave(g.wave);
+      g.gold += Math.floor((CFG.waveGoldBase + g.wave * CFG.waveGoldSlope) * g.diff.gold * s.goldMult);
+      if (g.wave % 5 === 0) io.addDiamonds(Math.floor(4 * g.diff.gem * s.gemYield));
+    }
+    if (!g.waveActive) { g.cooldown -= dt; if (g.cooldown <= 0) startWave(g, g.wave + 1); }
   }
-  if (g.waveActive && g.spawnQueue === 0 && g.enemies.length === 0) {
-    g.waveActive = false; g.cooldown = 1.4;
-    io.reportWave(g.wave);
-    g.gold += Math.floor((CFG.waveGoldBase + g.wave * CFG.waveGoldSlope) * g.diff.gold * s.goldMult);
-    if (g.wave % 5 === 0) io.addDiamonds(Math.floor(4 * g.diff.gem * s.gemYield));
-  }
-  if (!g.waveActive) { g.cooldown -= dt; if (g.cooldown <= 0) startWave(g, g.wave + 1); }
 
   // 敵人移動 / 荊棘 / 撞塔
   const slow = g.buffs.frost > 0 ? 0.35 : 1;
@@ -68,7 +81,7 @@ export function stepGame(g, s, dt, weaponKey, io) {
       g.enemies.splice(i, 1);
       if (g.hp <= 0) {
         if (s.immortal && !g.immortalUsed) { g.hp = g.maxHp * 0.35; g.immortalUsed = true; ringFx(g, 0, 0, "#4ade80", WORLD.tower * 5, 0.5); burst(g, 0, 0, "#4ade80", 22); }
-        else { g.hp = 0; g.gameOver = true; io.reportWave(g.wave); io.addDiamonds(Math.floor(g.wave * 2 * s.gemYield * g.diff.gem)); }
+        else { g.hp = 0; endRun(g, s, io); }
       }
       continue;
     }
@@ -170,6 +183,19 @@ export function stepGame(g, s, dt, weaponKey, io) {
   for (let i = g.beams.length - 1; i >= 0; i--) { g.beams[i].life -= dt; if (g.beams[i].life <= 0) g.beams.splice(i, 1); }
   for (let i = g.particles.length - 1; i >= 0; i--) { const p = g.particles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; p.vx *= 0.92; p.vy *= 0.92; if (p.life <= 0) g.particles.splice(i, 1); }
   for (let i = g.fx.length - 1; i >= 0; i--) { g.fx[i].life -= dt; if (g.fx[i].life <= 0) g.fx.splice(i, 1); }
+}
+
+// 結束本局並依模式結算（死亡或生存時間到都走這裡）。
+function endRun(g, s, io) {
+  if (g.gameOver) return;
+  g.gameOver = true;
+  if (g.mode === "survival") {
+    io.reportSurvival(g.kills);
+    io.addDiamonds(Math.floor(g.kills * 0.4 * s.gemYield * g.diff.gem));
+  } else {
+    io.reportWave(g.wave);
+    io.addDiamonds(Math.floor(g.wave * 2 * s.gemYield * g.diff.gem));
+  }
 }
 
 // 主動技能。回傳是否成功施放。

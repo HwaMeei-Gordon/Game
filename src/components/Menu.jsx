@@ -9,9 +9,10 @@ export default function Menu({ metaV, onStart, onPerm, onStats, onDex, onCodes }
       <div style={{ zIndex: 1, textAlign: "center" }}>
         <div style={{ fontFamily: MONO, fontWeight: 800, fontSize: 38, letterSpacing: 5, color: "#67e8f9", textShadow: "0 0 22px rgba(34,211,238,0.5)" }}>THE TOWER</div>
         <div style={{ fontSize: 16, letterSpacing: 8, color: "#64748b", marginTop: 2, marginBottom: 24 }}>無 盡 塔 防</div>
-        <div style={{ display: "flex", gap: 18, justifyContent: "center", marginBottom: 26, fontSize: 14 }}>
+        <div style={{ display: "flex", gap: 16, justifyContent: "center", marginBottom: 26, fontSize: 14, flexWrap: "wrap" }}>
           <span style={{ color: "#67e8f9" }}>💎 {metaV.diamonds.toLocaleString()}</span>
           <span style={{ color: "#c4b5fd" }}>⭐ 最佳 第{metaV.bestWave}波</span>
+          {metaV.bestKills > 0 && <span style={{ color: "#fca5a5" }}>☠ 生存 {metaV.bestKills}</span>}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 11, width: 250, margin: "0 auto" }}>
           <button onClick={onStart} style={menuBtn("#0e7490", "#22d3ee", "#ecfeff", true)}>▶ 開始遊戲</button>

@@ -7,9 +7,10 @@ import { WORLD, DEFAULT_ZOOM, ZOOM_MIN, ZOOM_MAX } from "./data/tuning.js";
 import { DEFAULT_WEAPON } from "./data/weapons.js";
 import { ZERO_SKILL, findSkill, skillCost } from "./data/skills.js";
 import { ZERO_NODES, nodeById, isBig, countBig, isNodeUnlocked, MAX_BIG, unlockedWeapons } from "./data/skillTree.js";
+import { HEADSTART_OFFSET } from "./data/modes.js";
 import { derive } from "./engine/stats.js";
 import { encodeSave, decodeSave } from "./engine/save.js";
-import { createRun } from "./engine/game.js";
+import { createRun, cumulativeWaveGold } from "./engine/game.js";
 import { stepGame, triggerAbility } from "./engine/update.js";
 import { draw } from "./render/draw.js";
 import { FONT } from "./styles.js";
@@ -17,6 +18,7 @@ import { FONT } from "./styles.js";
 import Menu from "./components/Menu.jsx";
 import GameScreen from "./components/GameScreen.jsx";
 import Overlay from "./components/Overlay.jsx";
+import StartOverlay from "./components/StartOverlay.jsx";
 import SkillMap from "./components/SkillMap.jsx";
 import StatsPanel from "./components/StatsPanel.jsx";
 import EnemyPanel from "./components/EnemyPanel.jsx";
@@ -24,13 +26,17 @@ import CodesOverlay from "./components/CodesOverlay.jsx";
 
 // 自動存檔：把進度寫進這支手機/瀏覽器的 localStorage（同裝置關掉重開都還在）。
 // 進度代碼則用於換裝置/備份。鍵名含版本，存檔格式改變時不會誤讀舊資料。
+// bestKills（無限生存最佳擊殺）另存一支 key，不放進可攜的進度代碼。
 const SAVE_KEY = "thetower_save_v3";
+const BESTKILLS_KEY = "thetower_bestkills";
 function loadMeta() {
+  let bestKills = 0;
+  try { bestKills = parseInt(localStorage.getItem(BESTKILLS_KEY) || "0", 10) || 0; } catch {}
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (raw) { const r = decodeSave(raw); if (r) return { diamonds: r.diamonds, nodes: { ...ZERO_NODES, ...r.nodes }, bestWave: r.bestWave }; }
+    if (raw) { const r = decodeSave(raw); if (r) return { diamonds: r.diamonds, nodes: { ...ZERO_NODES, ...r.nodes }, bestWave: r.bestWave, bestKills }; }
   } catch {}
-  return { diamonds: 0, nodes: { ...ZERO_NODES }, bestWave: 1 };
+  return { diamonds: 0, nodes: { ...ZERO_NODES }, bestWave: 1, bestKills };
 }
 
 export default function App() {
@@ -46,9 +52,10 @@ export default function App() {
 
   const metaRef = useRef(loadMeta());
   const [metaV, setMetaV] = useState(metaRef.current);
-  const commitMeta = useCallback(() => setMetaV({ diamonds: metaRef.current.diamonds, nodes: { ...metaRef.current.nodes }, bestWave: metaRef.current.bestWave }), []);
+  const commitMeta = useCallback(() => setMetaV({ diamonds: metaRef.current.diamonds, nodes: { ...metaRef.current.nodes }, bestWave: metaRef.current.bestWave, bestKills: metaRef.current.bestKills || 0 }), []);
   // 進度每次變動就自動寫回本機（涵蓋升級、買節點、讀代碼、過波/死亡結算）。
   useEffect(() => { try { localStorage.setItem(SAVE_KEY, encodeSave(metaV.diamonds, metaV.nodes, metaV.bestWave)); } catch {} }, [metaV]);
+  useEffect(() => { try { localStorage.setItem(BESTKILLS_KEY, String(metaV.bestKills || 0)); } catch {} }, [metaV.bestKills]);
 
   const skillRef = useRef({ ...ZERO_SKILL });
   const [skillV, setSkillV] = useState(skillRef.current);
@@ -57,7 +64,7 @@ export default function App() {
   const [overlay, setOverlay] = useState(null);
   const [skillCat, setSkillCat] = useState("attack");
   const [weapon, setWeapon] = useState(DEFAULT_WEAPON);
-  const [hud, setHud] = useState({ gold: 0, wave: 1, hp: 100, maxHp: 100, gameOver: false, diff: "normal" });
+  const [hud, setHud] = useState({ gold: 0, wave: 1, hp: 100, maxHp: 100, gameOver: false, diff: "normal", mode: "classic", timeLeft: 0, kills: 0 });
   const [cds, setCds] = useState({ over: 0, nova: 0, frost: 0, repair: 0 });
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
@@ -70,11 +77,21 @@ export default function App() {
   const io = useRef({
     addDiamonds: (n) => { metaRef.current.diamonds += n; },
     reportWave: (n) => { metaRef.current.bestWave = Math.max(metaRef.current.bestWave, n); },
+    reportSurvival: (k) => { metaRef.current.bestKills = Math.max(metaRef.current.bestKills || 0, k); },
   });
 
-  const newRun = useCallback((diffKey) => {
+  const newRun = useCallback((diffKey, mode = "classic") => {
     skillRef.current = { ...ZERO_SKILL }; recompute();
-    game.current = createRun(diffKey, statsRef.current);
+    const best = metaRef.current.bestWave;
+    const opts = { mode };
+    if (mode === "headstart") {
+      const sw = Math.max(1, best - HEADSTART_OFFSET);
+      opts.startWave = sw;
+      opts.startGold = cumulativeWaveGold(sw, DIFF[diffKey]);
+    } else if (mode === "survival") {
+      opts.survivalStrength = Math.max(1, best);
+    }
+    game.current = createRun(diffKey, statsRef.current, opts);
     cam.current.zoom = DEFAULT_ZOOM;
     lastDia.current = metaRef.current.diamonds; wasOver.current = false;
     setSkillV({ ...skillRef.current });
@@ -99,7 +116,7 @@ export default function App() {
       if (metaRef.current.diamonds < def.cost) return snap();
       metaRef.current.diamonds -= def.cost; nd[id] = 1; return snap();
     });
-    function snap() { return { diamonds: metaRef.current.diamonds, nodes: { ...metaRef.current.nodes }, bestWave: metaRef.current.bestWave }; }
+    function snap() { return { diamonds: metaRef.current.diamonds, nodes: { ...metaRef.current.nodes }, bestWave: metaRef.current.bestWave, bestKills: metaRef.current.bestKills || 0 }; }
   }, []);
 
   const useAbility = useCallback((k) => {
@@ -107,9 +124,9 @@ export default function App() {
     if (triggerAbility(g, statsRef.current, k)) setCds({ ...g.cds });
   }, []);
 
-  const startGame = (dk) => { newRun(dk); setWeapon(DEFAULT_WEAPON); setOverlay(null); setPaused(false); setSkillCat("attack"); setScreen("playing"); };
+  const startGame = (dk, mode = "classic") => { newRun(dk, mode); setWeapon(DEFAULT_WEAPON); setOverlay(null); setPaused(false); setSkillCat("attack"); setScreen("playing"); };
   const toMenu = () => { setScreen("menu"); setOverlay(null); };
-  const restart = () => { newRun(game.current.diffKey); setWeapon(DEFAULT_WEAPON); setPaused(false); setSkillCat("attack"); };
+  const restart = () => { newRun(game.current.diffKey, game.current.mode); setWeapon(DEFAULT_WEAPON); setPaused(false); setSkillCat("attack"); };
 
   // 量測畫布尺寸（含 DPR）
   useEffect(() => {
@@ -153,7 +170,7 @@ export default function App() {
       acc += dt;
       if (acc > 0.08) {
         acc = 0;
-        setHud({ gold: Math.floor(g.gold), wave: g.wave, hp: Math.ceil(g.hp), maxHp: Math.round(g.maxHp), gameOver: g.gameOver, diff: g.diffKey });
+        setHud({ gold: Math.floor(g.gold), wave: g.wave, hp: Math.ceil(g.hp), maxHp: Math.round(g.maxHp), gameOver: g.gameOver, diff: g.diffKey, mode: g.mode, timeLeft: g.survivalTime, kills: g.kills });
         setCds({ ...g.cds });
         if (metaRef.current.diamonds !== lastDia.current) { lastDia.current = metaRef.current.diamonds; commitMeta(); }
         if (g.gameOver && !wasOver.current) { wasOver.current = true; commitMeta(); }
@@ -174,10 +191,10 @@ export default function App() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap');*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}button{font-family:inherit}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:3px}`}</style>
 
       {screen === "menu" ? (
-        <Menu metaV={metaV} onStart={() => setOverlay("diff")} onPerm={() => setOverlay("perm")} onStats={() => setOverlay("stats")} onDex={() => setOverlay("dex")} onCodes={() => setOverlay("codes")} />
+        <Menu metaV={metaV} onStart={() => setOverlay("start")} onPerm={() => setOverlay("perm")} onStats={() => setOverlay("stats")} onDex={() => setOverlay("dex")} onCodes={() => setOverlay("codes")} />
       ) : (
         <GameScreen
-          wrapRef={wrapRef} canvasRef={canvasRef} hud={hud} diamonds={metaV.diamonds} paused={paused}
+          wrapRef={wrapRef} canvasRef={canvasRef} hud={hud} diamonds={metaV.diamonds} bestKills={metaV.bestKills} paused={paused}
           onMenu={toMenu} onPause={() => setPaused((p) => !p)} onOpenStats={() => setOverlay("stats")} onOpenDex={() => setOverlay("dex")} onRestart={restart}
           unlockedWeapons={uw} weapon={weapon} setWeapon={setWeapon}
           cds={cds} onUseAbility={useAbility}
@@ -185,16 +202,8 @@ export default function App() {
         />
       )}
 
-      {overlay === "diff" && (
-        <Overlay title="選擇難度" onClose={() => setOverlay(null)}>
-          {Object.keys(DIFF).map((dk) => { const dd = DIFF[dk];
-            return (
-              <button key={dk} onClick={() => startGame(dk)} style={{ width: "100%", textAlign: "left", padding: "14px 16px", marginBottom: 8, borderRadius: 12, border: `1px solid ${dd.col}55`, background: `${dd.col}14`, color: "#e2e8f0", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div><div style={{ fontWeight: 700, fontSize: 17, color: dd.col }}>{dd.name}</div><div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>{dd.desc}</div></div>
-                <div style={{ fontSize: 11, color: "#64748b", textAlign: "right" }}>敵人 ×{dd.ehp}<br />鑽石 ×{dd.gem}</div>
-              </button>
-            ); })}
-        </Overlay>
+      {overlay === "start" && (
+        <StartOverlay bestWave={metaV.bestWave} bestKills={metaV.bestKills} onStart={startGame} onClose={() => setOverlay(null)} />
       )}
       {overlay === "perm" && (
         <Overlay title="技能地圖 · 💎鑽石" onClose={() => setOverlay(null)} extra={<span style={{ color: "#67e8f9", fontWeight: 700 }}>💎 {metaV.diamonds.toLocaleString()}</span>}>
