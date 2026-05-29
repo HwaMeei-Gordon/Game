@@ -20,7 +20,7 @@ export default function Menu({ metaV, onStart, onPerm, onStats, onDex, onCodes }
           <button onClick={onDex} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>👾 敵人圖鑑</button>
           <button onClick={onCodes} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>💾 進度代碼</button>
         </div>
-        <p style={{ fontSize: 11, color: "#475569", marginTop: 24, maxWidth: 290, lineHeight: 1.6 }}>進度不會自動保存。離開前請至「進度代碼」複製代碼，下次貼回即可還原。</p>
+        <p style={{ fontSize: 11, color: "#475569", marginTop: 24, maxWidth: 290, lineHeight: 1.6 }}>進度會自動存在這支手機的瀏覽器，關掉重開都還在。換手機或想備份時，請用「進度代碼」複製/貼回。</p>
       </div>
     </div>
   );

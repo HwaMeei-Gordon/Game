@@ -8,6 +8,7 @@ import { DEFAULT_WEAPON } from "./data/weapons.js";
 import { ZERO_SKILL, findSkill, skillCost } from "./data/skills.js";
 import { ZERO_NODES, nodeById, isBig, countBig, isNodeUnlocked, MAX_BIG, unlockedWeapons } from "./data/skillTree.js";
 import { derive } from "./engine/stats.js";
+import { encodeSave, decodeSave } from "./engine/save.js";
 import { createRun } from "./engine/game.js";
 import { stepGame, triggerAbility } from "./engine/update.js";
 import { draw } from "./render/draw.js";
@@ -21,6 +22,17 @@ import StatsPanel from "./components/StatsPanel.jsx";
 import EnemyPanel from "./components/EnemyPanel.jsx";
 import CodesOverlay from "./components/CodesOverlay.jsx";
 
+// 自動存檔：把進度寫進這支手機/瀏覽器的 localStorage（同裝置關掉重開都還在）。
+// 進度代碼則用於換裝置/備份。鍵名含版本，存檔格式改變時不會誤讀舊資料。
+const SAVE_KEY = "thetower_save_v3";
+function loadMeta() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) { const r = decodeSave(raw); if (r) return { diamonds: r.diamonds, nodes: { ...ZERO_NODES, ...r.nodes }, bestWave: r.bestWave }; }
+  } catch {}
+  return { diamonds: 0, nodes: { ...ZERO_NODES }, bestWave: 1 };
+}
+
 export default function App() {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
@@ -32,9 +44,11 @@ export default function App() {
   const lastDia = useRef(0);
   const wasOver = useRef(false);
 
-  const metaRef = useRef({ diamonds: 0, nodes: { ...ZERO_NODES }, bestWave: 1 });
+  const metaRef = useRef(loadMeta());
   const [metaV, setMetaV] = useState(metaRef.current);
   const commitMeta = useCallback(() => setMetaV({ diamonds: metaRef.current.diamonds, nodes: { ...metaRef.current.nodes }, bestWave: metaRef.current.bestWave }), []);
+  // 進度每次變動就自動寫回本機（涵蓋升級、買節點、讀代碼、過波/死亡結算）。
+  useEffect(() => { try { localStorage.setItem(SAVE_KEY, encodeSave(metaV.diamonds, metaV.nodes, metaV.bestWave)); } catch {} }, [metaV]);
 
   const skillRef = useRef({ ...ZERO_SKILL });
   const [skillV, setSkillV] = useState(skillRef.current);
