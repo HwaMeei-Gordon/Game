@@ -54,6 +54,7 @@ export default function GameScreen(props) {
 
       <WeaponBar unlocked={unlockedWeapons} weapon={weapon} setWeapon={setWeapon} />
       <AbilityBar cds={cds} onUse={onUseAbility} />
+      <div style={{ textAlign: "center", fontSize: 9, color: "#475569", marginTop: -2 }}>長按技能 / 升級圖示可看說明</div>
       <SkillBar skillCat={skillCat} setSkillCat={setSkillCat} skillV={skillV} gold={hud.gold} onBuy={onBuySkill} />
     </>
   );

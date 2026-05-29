@@ -9,7 +9,7 @@ import { CRIT_MULT } from "./stats.js";
 import { spawnEnemy, startWave, killEnemy, burst, ringFx, damageEnemy, mitigate, mitigateDot, chainHit } from "./game.js";
 
 export function rangeOf(s) {
-  return Math.min(WORLD.rangeMax, WORLD.rangeBase + s.rangeBonus * WORLD.rangeStep);
+  return Math.min(WORLD.rangeMax, WORLD.rangeBase + s.rangeBonus * WORLD.rangeStep) + (s.rangeFlat || 0);
 }
 
 // io：{ addDiamonds(n), reportWave(n) } — 把跨局的鑽石/最佳波次回報給外層。

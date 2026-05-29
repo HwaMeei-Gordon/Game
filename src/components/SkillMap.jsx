@@ -10,13 +10,15 @@ import {
   isNodeUnlocked, childrenOf, nodeDesc, spentDiamonds, resetFee,
 } from "../data/skillTree.js";
 
-const VW = 1500, VH = 1500, ORIGIN = 750;
-const nodeR = (n) => (n.t === "keystone" ? 32 : isBig(n) ? 28 : n.t === "weapon" || n.t === "core" || n.t === "curse" ? 24 : 21);
+const VW = 2400, VH = 2400, ORIGIN = 1200;
+const SPREAD = 1.7; // 版面放大倍率：把節點間距整體拉開，避免擁擠
+const nodeR = (n) => (n.t === "keystone" ? 34 : isBig(n) ? 30 : n.t === "weapon" || n.t === "core" || n.t === "curse" ? 26 : 22);
+const NX = (n) => n.x * SPREAD, NY = (n) => n.y * SPREAD;
 
 export default function SkillMap({ nodes, diamonds, onBuy, onReset }) {
   const [sel, setSel] = useState("core");
   const [armed, setArmed] = useState(false);
-  const [view, setView] = useState({ tx: 0, ty: -170, zoom: 0.78 });
+  const [view, setView] = useState({ tx: 0, ty: -360, zoom: 0.6 });
   const box = useRef(null);
   const drag = useRef({ down: false, moved: false, sx: 0, sy: 0, otx: 0, oty: 0, lp: null, lpFired: false });
   const pinch = useRef({ active: false, d0: 0, oz: 1 });
@@ -29,10 +31,10 @@ export default function SkillMap({ nodes, diamonds, onBuy, onReset }) {
   };
   const hit = (cx, cy) => {
     const { wx, wy } = toWorld(cx, cy); let found = null, fd = 1e9;
-    for (const n of NODES) { const rr = nodeR(n) + 4; const dd = (n.x - wx) ** 2 + (n.y - wy) ** 2; if (dd < rr * rr && dd < fd) { fd = dd; found = n; } }
+    for (const n of NODES) { const rr = nodeR(n) + 6; const dd = (NX(n) - wx) ** 2 + (NY(n) - wy) ** 2; if (dd < rr * rr && dd < fd) { fd = dd; found = n; } }
     return found;
   };
-  const zoomBy = (f) => setView((v) => ({ ...v, zoom: Math.max(0.5, Math.min(2.4, +(v.zoom * f).toFixed(3))) }));
+  const zoomBy = (f) => setView((v) => ({ ...v, zoom: Math.max(0.4, Math.min(2.6, +(v.zoom * f).toFixed(3))) }));
   const onDown = (e) => {
     if (pinch.current.active) return; const t = e.touches ? e.touches[0] : e;
     drag.current = { ...drag.current, down: true, moved: false, sx: t.clientX, sy: t.clientY, otx: view.tx, oty: view.ty, lpFired: false };
@@ -48,18 +50,16 @@ export default function SkillMap({ nodes, diamonds, onBuy, onReset }) {
       setView((v) => ({ ...v, tx: drag.current.otx + dx * kx, ty: drag.current.oty + dy * ky }));
     }
   };
+  // 點一下只「選取」（不直接花鑽石），購買/取消一律走下方按鈕，避免誤觸。
   const onUp = (e) => {
     clearTimeout(drag.current.lp); const moved = drag.current.moved, fired = drag.current.lpFired; drag.current.down = false;
-    if (moved || fired || pinch.current.active) return;
+    if (moved || pinch.current.active) return;
     const t = e.changedTouches ? e.changedTouches[0] : e, nd = hit(t.clientX, t.clientY);
-    if (!nd) return; setSel(nd.id);
-    const owned = (nodes[nd.id] || 0) >= 1;
-    if (owned) { if (isBig(nd)) onBuy(nd.id); return; }
-    if (isNodeUnlocked(nd, nodes) && diamonds >= nd.cost && !(isBig(nd) && big >= MAX_BIG)) onBuy(nd.id);
+    if (nd) setSel(nd.id);
   };
   const dist2 = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
   const onTStart = (e) => { if (e.touches.length === 2) { pinch.current = { active: true, d0: dist2(e.touches[0], e.touches[1]) || 1, oz: view.zoom }; clearTimeout(drag.current.lp); drag.current.down = false; drag.current.moved = false; } };
-  const onTMove = (e) => { if (pinch.current.active && e.touches.length === 2) { const d = dist2(e.touches[0], e.touches[1]); setView((v) => ({ ...v, zoom: Math.max(0.5, Math.min(2.4, pinch.current.oz * d / pinch.current.d0)) })); } };
+  const onTMove = (e) => { if (pinch.current.active && e.touches.length === 2) { const d = dist2(e.touches[0], e.touches[1]); setView((v) => ({ ...v, zoom: Math.max(0.4, Math.min(2.6, pinch.current.oz * d / pinch.current.d0)) })); } };
   const onTEnd = (e) => { if (e.touches.length < 2) pinch.current.active = false; };
 
   const selNode = sel ? nodeById[sel] : null;
@@ -72,7 +72,7 @@ export default function SkillMap({ nodes, diamonds, onBuy, onReset }) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontSize: 11, color: "#64748b" }}>拖曳平移 · 雙指縮放 · 點節點看路徑</span>
+        <span style={{ fontSize: 11, color: "#64748b" }}>拖曳平移 · 雙指縮放 · 點節點選取，再按下方按鈕點亮</span>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <button onClick={() => zoomBy(1 / 1.25)} style={zbtn}>−</button>
           <button onClick={() => zoomBy(1.25)} style={zbtn}>＋</button>
@@ -99,7 +99,7 @@ export default function SkillMap({ nodes, diamonds, onBuy, onReset }) {
                 if (childOwned && parentOwned) { stroke = baseCol; width = 4; opacity = 0.85; }
                 else if (parentOwned) { stroke = baseCol; width = 3; opacity = fromSel ? 0.95 : 0.55; dash = "7 5"; }
                 if (fromSel && !childOwned) { width = 3.5; opacity = 0.95; }
-                return <line key={"l" + nd.id + pid} x1={nd.x} y1={nd.y} x2={p.x} y2={p.y} stroke={stroke} strokeWidth={width} opacity={opacity} strokeDasharray={dash} strokeLinecap="round" />;
+                return <line key={"l" + nd.id + pid} x1={NX(nd)} y1={NY(nd)} x2={NX(p)} y2={NY(p)} stroke={stroke} strokeWidth={width} opacity={opacity} strokeDasharray={dash} strokeLinecap="round" />;
               });
             })}
             {/* 節點 */}
@@ -111,32 +111,36 @@ export default function SkillMap({ nodes, diamonds, onBuy, onReset }) {
               const isChildOfSel = selChildren.includes(nd.id);
               const col = nd.t === "curse" ? NODE_COL.curse : NODE_COL[nd.br];
               const rN = nodeR(nd), isz = Math.round(rN * 0.9);
+              const X = NX(nd), Y = NY(nd);
               return (
                 <g key={nd.id} style={{ cursor: "pointer" }}>
-                  {sel === nd.id && <circle cx={nd.x} cy={nd.y} r={rN + 6} fill="none" stroke={col} strokeWidth="2.5" opacity="0.85" />}
+                  {sel === nd.id && <circle cx={X} cy={Y} r={rN + 6} fill="none" stroke={col} strokeWidth="2.5" opacity="0.85" />}
                   {reachable && (
-                    <circle cx={nd.x} cy={nd.y} r={rN + 4} fill="none" stroke={afford ? col : "#475569"} strokeWidth="2">
+                    <circle cx={X} cy={Y} r={rN + 4} fill="none" stroke={afford ? col : "#475569"} strokeWidth="2">
                       <animate attributeName="opacity" values="0.25;0.85;0.25" dur="1.6s" repeatCount="indefinite" />
                     </circle>
                   )}
-                  {isChildOfSel && !owned && <circle cx={nd.x} cy={nd.y} r={rN + 9} fill="none" stroke={col} strokeWidth="1.4" opacity="0.4" strokeDasharray="3 4" />}
-                  {isBig(nd) && <circle cx={nd.x} cy={nd.y} r={rN + 3} fill="none" stroke={owned ? col : "#334155"} strokeWidth="1.5" opacity="0.5" />}
-                  <circle cx={nd.x} cy={nd.y} r={rN}
+                  {isChildOfSel && !owned && <circle cx={X} cy={Y} r={rN + 9} fill="none" stroke={col} strokeWidth="1.4" opacity="0.4" strokeDasharray="3 4" />}
+                  {isBig(nd) && <circle cx={X} cy={Y} r={rN + 3} fill="none" stroke={owned ? col : "#334155"} strokeWidth="1.5" opacity="0.5" />}
+                  <circle cx={X} cy={Y} r={rN}
                     fill={owned ? col + "44" : afford ? col + "22" : blocked ? "#1a1015" : "#0b1220"}
                     stroke={owned ? col : blocked ? "#7f1d1d" : afford ? col : unlocked ? "#64748b" : "#1e293b"}
                     strokeWidth={nd.t === "keystone" ? 3 : isBig(nd) ? 2.5 : 1.8} opacity={unlocked || owned ? 1 : 0.45} />
-                  <g transform={`translate(${nd.x - isz / 2}, ${nd.y - isz / 2})`} opacity={unlocked || owned ? 1 : 0.5}>
+                  <g transform={`translate(${X - isz / 2}, ${Y - isz / 2})`} opacity={unlocked || owned ? 1 : 0.5}>
                     <foreignObject x="0" y="0" width={isz} height={isz}>
                       <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: isz, height: isz }}>
                         <Icon type={nd.icon} size={isz} color={owned ? "#fff" : nd.t === "curse" ? "#fca5a5" : unlocked ? "#e2e8f0" : "#475569"} />
                       </div>
                     </foreignObject>
                   </g>
-                  {!unlocked && !owned && <text x={nd.x} y={nd.y + rN + 14} fontSize="13" textAnchor="middle">🔒</text>}
+                  {/* 鑽石花費預覽（未點亮且有費用才顯示） */}
+                  {!owned && nd.cost > 0 && (
+                    <text x={X} y={Y + rN + 17} fontSize="15" fontWeight="700" textAnchor="middle" fill={afford ? (nd.t === "curse" ? "#fca5a5" : col) : "#475569"}>{unlocked ? "" : "🔒"}💎{nd.cost}</text>
+                  )}
                   {owned && (
                     <g>
-                      <circle cx={nd.x + rN - 4} cy={nd.y - rN + 4} r="7.5" fill="#16a34a" stroke="#4ade80" strokeWidth="1.2" />
-                      <path d={`M${nd.x + rN - 7.5} ${nd.y - rN + 4}l2 2.4 3.4-4`} stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx={X + rN - 4} cy={Y - rN + 4} r="7.5" fill="#16a34a" stroke="#4ade80" strokeWidth="1.2" />
+                      <path d={`M${X + rN - 7.5} ${Y - rN + 4}l2 2.4 3.4-4`} stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                     </g>
                   )}
                 </g>

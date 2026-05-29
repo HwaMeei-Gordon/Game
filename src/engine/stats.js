@@ -22,6 +22,7 @@ export function derive(nodes, skill) {
   return {
     damage, fireRate,
     rangeBonus: skill.range,
+    rangeFlat: G("rangeFlat"),
     maxHp: (100 + skill.hp * 30) * hpM,
     regen: skill.regen * 1.4 + G("regen") + CFG.baseRegen,
     armor: glass ? 0 : skill.armor * 1.5 + G("armor"),

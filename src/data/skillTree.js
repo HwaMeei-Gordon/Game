@@ -53,6 +53,8 @@ export const NODES = [
   { id: "d_vit",     t: "small",    br: "def", x: 510, y: 432, parent: "d_regen2",  name: "活力", icon: "hp",    cost: 130, bonus: { hpM: 0.12, regen: 2 } },
   { id: "d_guard",   t: "small",    br: "def", x: 235, y: 540, parent: "d_bulwark", name: "守護", icon: "hp",    cost: 130, bonus: { armor: 20, hpM: 0.10 } },
   { id: "d_aegis",   t: "small",    br: "def", x: 320, y: 540, parent: "D_immortal",name: "神盾", icon: "armor", cost: 160, bonus: { armor: 20, hpM: 0.05 } },
+  { id: "d_range1",  t: "small",    br: "def", x: 235, y: 650, parent: "d_guard",   name: "鷹眼", icon: "range", cost: 150, bonus: { rangeFlat: 0.35 }, info: "增加攻擊範圍。建議在局內「範圍」點滿後取得，可突破原本射程上限。" },
+  { id: "d_range2",  t: "small",    br: "def", x: 235, y: 760, parent: "d_range1",  name: "超級範圍", icon: "range", cost: 260, bonus: { rangeFlat: 0.65 }, info: "進一步大幅增加攻擊範圍，突破原本射程上限。" },
 
   // ── 混合主幹（中） ──
   { id: "m_gold1",   t: "small",    br: "mix", x: -40, y: 108, parent: "core",      name: "拾荒", icon: "gold",  cost: 30,  bonus: { goldM: 0.12 } },
@@ -122,6 +124,7 @@ export function nodeDesc(nd) {
   if (b.armor) parts.push(`護甲 +${b.armor}`);
   if (b.thorns) parts.push(`灼燒 +${b.thorns}/s`);
   if (b.splash) parts.push(`濺射 +${(b.splash * 100).toFixed(0)}%`);
+  if (b.rangeFlat) parts.push(`攻擊範圍 +${b.rangeFlat}`);
   if (b.multishot) parts.push(`+${b.multishot} 發子彈`);
   if (b.pierce) parts.push(`穿透 +${b.pierce}`);
   if (b.orbs) parts.push(`+${b.orbs} 無人機`);
