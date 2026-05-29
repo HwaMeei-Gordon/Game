@@ -11,14 +11,14 @@ import {
 } from "../data/skillTree.js";
 
 const VW = 2400, VH = 2400, ORIGIN = 1200;
-const SPREAD = 1.7; // 版面放大倍率：把節點間距整體拉開，避免擁擠
+const SPREAD = 2.0; // 版面放大倍率：把節點間距整體拉開，避免擁擠
 const nodeR = (n) => (n.t === "keystone" ? 34 : isBig(n) ? 30 : n.t === "weapon" || n.t === "core" || n.t === "curse" ? 26 : 22);
 const NX = (n) => n.x * SPREAD, NY = (n) => n.y * SPREAD;
 
 export default function SkillMap({ nodes, diamonds, onBuy, onReset }) {
   const [sel, setSel] = useState("core");
   const [armed, setArmed] = useState(false);
-  const [view, setView] = useState({ tx: 0, ty: -360, zoom: 0.6 });
+  const [view, setView] = useState({ tx: -80, ty: -250, zoom: 0.52 });
   const box = useRef(null);
   const drag = useRef({ down: false, moved: false, sx: 0, sy: 0, otx: 0, oty: 0, lp: null, lpFired: false });
   const pinch = useRef({ active: false, d0: 0, oz: 1 });
@@ -95,11 +95,12 @@ export default function SkillMap({ nodes, diamonds, onBuy, onReset }) {
                 const cu = nd.t === "curse" || p.t === "curse";
                 const baseCol = cu ? "#f43f5e" : NODE_COL[nd.br];
                 const fromSel = sel === pid; // 從選取節點延伸出去的路徑
-                let stroke = "#1b2740", width = 2, opacity = 0.4, dash = cu ? "6 5" : "none";
-                if (childOwned && parentOwned) { stroke = baseCol; width = 4; opacity = 0.85; }
-                else if (parentOwned) { stroke = baseCol; width = 3; opacity = fromSel ? 0.95 : 0.55; dash = "7 5"; }
-                if (fromSel && !childOwned) { width = 3.5; opacity = 0.95; }
-                return <line key={"l" + nd.id + pid} x1={NX(nd)} y1={NY(nd)} x2={NX(p)} y2={NY(p)} stroke={stroke} strokeWidth={width} opacity={opacity} strokeDasharray={dash} strokeLinecap="round" />;
+                // 線寬用 non-scaling-stroke（不隨縮放變細），確保任何縮放都清楚。
+                let stroke = "#46577a", width = 2.4, opacity = 0.8, dash = cu ? "5 4" : "none";
+                if (childOwned && parentOwned) { stroke = baseCol; width = 4; opacity = 1; }
+                else if (parentOwned) { stroke = baseCol; width = 3; opacity = fromSel ? 1 : 0.8; dash = "6 5"; }
+                if (fromSel && !childOwned) { width = 3.5; opacity = 1; }
+                return <line key={"l" + nd.id + pid} x1={NX(nd)} y1={NY(nd)} x2={NX(p)} y2={NY(p)} stroke={stroke} strokeWidth={width} opacity={opacity} strokeDasharray={dash} strokeLinecap="round" vectorEffect="non-scaling-stroke" />;
               });
             })}
             {/* 節點 */}
