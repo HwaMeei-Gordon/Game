@@ -82,7 +82,7 @@ export default function App() {
 
   const [screen, setScreen] = useState("menu");
   const [overlay, setOverlay] = useState(null);
-  const [upTab, setUpTab] = useState("global");
+  const [upTab, setUpTab] = useState("cannon");
   const [hud, setHud] = useState({ gold: 0, wave: 1, hp: 100, maxHp: 100, gameOver: false, diff: "normal", mode: "classic", timeLeft: 0, kills: 0 });
   const [cds, setCds] = useState({ over: 0, nova: 0, frost: 0, repair: 0 });
   const [paused, setPaused] = useState(false);
@@ -170,9 +170,9 @@ export default function App() {
     if (triggerAbility(g, statsRef.current, k)) { setCds({ ...g.cds }); audio.play("ability"); }
   }, []);
 
-  const startGame = (dk, mode = "classic") => { newRun(dk, mode); setOverlay(null); setPaused(false); setSpeed(1); setUpTab("global"); setScreen("playing"); };
+  const startGame = (dk, mode = "classic") => { newRun(dk, mode); setOverlay(null); setPaused(false); setSpeed(1); setUpTab("cannon"); setScreen("playing"); };
   const toMenu = () => { setScreen("menu"); setOverlay(null); };
-  const restart = () => { newRun(game.current.diffKey, game.current.mode); setPaused(false); setUpTab("global"); };
+  const restart = () => { newRun(game.current.diffKey, game.current.mode); setPaused(false); setUpTab("cannon"); };
 
   // 量測畫布
   useEffect(() => {

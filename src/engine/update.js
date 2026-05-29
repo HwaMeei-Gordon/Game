@@ -103,15 +103,15 @@ export function stepGame(g, s, dt, weapons, io) {
   // 依距離排序所有敵人；各武器再用自己的射程篩選（每把武器射程不同）
   const byDist = g.enemies.map((e) => ({ e, dd: Math.hypot(e.x, e.y) })).sort((a, b) => a.dd - b.dd);
   const dm = g.buffs.over > 0 ? 3 : 1;
-  const crit1 = () => Math.random() < s.critChance;
 
-  // 所有已啟用武器同時開火，各自使用自己的數值 s.weapons[wk]
+  // 所有已啟用武器同時開火，各自使用自己的數值 s.weapons[wk]（含各自暴擊率）
   for (const wk of weapons) {
     const wp = WEAPONS[wk], ws = s.weapons[wk]; if (!wp || !ws) continue;
     const inRange = byDist.filter((o) => o.dd <= ws.range);
+    const wcrit = ws.critChance || 0;
     if (wk === "laser") {
       for (const { e } of inRange.slice(0, ws.multishot)) {
-        const crit = Math.random() < s.critChance * 0.3;
+        const crit = Math.random() < wcrit * 0.3;
         damageEnemy(e, mitigateDot(ws.damage * dm * (crit ? CRIT_MULT : 1), e.def) * dt);
         g.beams.push({ x1: 0, y1: 0, x2: e.x, y2: e.y, col: "#67e8f9", life: 0.05, wgt: 3 });
         if (e.hp <= 0) { const j = g.enemies.indexOf(e); if (j >= 0) killEnemy(g, s, e, j); }
@@ -130,11 +130,11 @@ export function stepGame(g, s, dt, weapons, io) {
       if (g.fireCd[wk] <= 0 && inRange.length) {
         const bspd = ws.bulletSpeed;
         if (wk === "chain") {
-          const first = inRange[0].e, crit = crit1(), a = Math.atan2(first.y, first.x);
+          const first = inRange[0].e, crit = Math.random() < wcrit, a = Math.atan2(first.y, first.x);
           g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: "chain", hits: [], spd: bspd, bounces: ws.bounces });
         } else {
           for (const { e } of inRange.slice(0, ws.multishot)) {
-            const a = Math.atan2(e.y, e.x), crit = crit1();
+            const a = Math.atan2(e.y, e.x), crit = Math.random() < wcrit;
             g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: wk, hits: [], spd: bspd, pierce: ws.pierce, splash: ws.splash, splashR: ws.splashRadius });
           }
         }

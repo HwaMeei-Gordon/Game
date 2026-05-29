@@ -31,8 +31,6 @@ export default function StatsPanel({ meta, skill }) {
     ["生命", r0(base.maxHp), r0(now.maxHp)],
     ["每秒回復", r1(base.regen), r1(now.regen)],
     ["護甲", r0(base.armor), r0(now.armor)],
-    ["射程", r2(rangeOf(base)), r2(rangeOf(now))],
-    ["暴擊率", pct(base.critChance), pct(now.critChance)],
     ["荊棘灼燒/秒", r1(base.thorns), r1(now.thorns)],
     ["軌道無人機", base.orbs, now.orbs],
     ["金幣加成", pct(base.goldMult - 1), pct(now.goldMult - 1)],
@@ -53,9 +51,11 @@ export default function StatsPanel({ meta, skill }) {
           return (
             <div key={wk} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid #131c2e", fontSize: 13 }}>
               <span style={{ color: "#e2e8f0", fontWeight: 700 }}>{WEAPONS[wk].name}</span>
-              <span style={{ fontFamily: MONO }}>
-                <span style={{ color: "#64748b" }}>傷害 </span><span style={{ color: "#fde68a" }}>{r0(w.damage)}</span>
-                <span style={{ color: "#64748b", marginLeft: 10 }}>DPS </span><span style={{ color: "#4ade80" }}>{r0(weaponDps(wk, w))}</span>
+              <span style={{ fontFamily: MONO, fontSize: 12 }}>
+                <span style={{ color: "#64748b" }}>傷 </span><span style={{ color: "#fde68a" }}>{r0(w.damage)}</span>
+                <span style={{ color: "#64748b", marginLeft: 8 }}>DPS </span><span style={{ color: "#4ade80" }}>{r0(weaponDps(wk, w))}</span>
+                <span style={{ color: "#64748b", marginLeft: 8 }}>射 </span><span style={{ color: "#67e8f9" }}>{r2(w.range)}</span>
+                <span style={{ color: "#64748b", marginLeft: 8 }}>暴 </span><span style={{ color: "#f0abfc" }}>{pct(w.critChance)}</span>
               </span>
             </div>
           );

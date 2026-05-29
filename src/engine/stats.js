@@ -23,9 +23,9 @@ export function derive(meta, skill) {
     maxHp: (100 + (gl.hp || 0) * 30) * hpM,
     regen: (gl.regen || 0) * 1.4 + Bg("regen") + CFG.baseRegen,
     armor: (gl.armor || 0) * 1.5 + Bg("armor"),
-    rangeBonus: (gl.range || 0),
+    rangeBonus: 0,
     rangeFlat: Bg("rangeFlat"),
-    critChance: (gl.crit || 0) * 0.05 + Bg("critC"),
+    critChance: Bg("critC"),
     thorns: Bg("thorns"),
     orbs: Bg("orbs"),
     gemYield: 1 + Bg("gem"),
@@ -54,7 +54,8 @@ export function derive(meta, skill) {
     const flameRange = WORLD.flameRange * (1 + (ws.frange || 0) * 0.12 + Wt("frange"));
     out.weapons[wk] = {
       damage, fireRate,
-      range: wk === "flame" ? flameRange : baseRange * wp.rangeF, // 各武器射程不同
+      range: wk === "flame" ? flameRange : (baseRange + (ws.wrange || 0) * 0.1) * wp.rangeF, // 各武器射程不同
+      critChance: out.critChance + (ws.crit || 0) * 0.05 + Wt("critC"), // 各武器暴擊
       multishot: 1 + (ws.multi || 0) + Wt("multishot"),
       pierce: 1 + (ws.pierce || 0) + Wt("pierce"),
       splash: (ws.splash || 0) * 0.12 + Wt("splash"),

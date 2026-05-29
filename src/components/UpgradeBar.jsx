@@ -1,42 +1,51 @@
-// ── 畫面：局內升級列（全域 + 各武器分頁） ───────────────────
-// 所有已啟用武器同時開火；這裡分頁切換要「加點」的對象（全域或某武器）。
+// ── 畫面：局內升級（武器分頁 + 攻擊/防禦/特殊 分類） ────────
+// 所有已啟用武器同時開火。選武器 → 選類別 → 升級。
+// 攻擊/特殊為該武器專屬；防禦為全塔共用（每把武器頁面都看得到、共用同一池）。
 import React, { useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 import { WEAPONS } from "../data/weapons.js";
-import { ITEMS, GLOBAL_ITEMS, WEAPON_ITEMS, weaponItemCost, globalItemCost } from "../data/skills.js";
+import { ITEMS, DEF_ITEMS, WEAPON_CATS, weaponItemCost, globalItemCost } from "../data/skills.js";
 import { MONO } from "../styles.js";
 
+const CATS = [["atk", "攻擊", "#fca5a5"], ["def", "防禦", "#7dd3fc"], ["sp", "特殊", "#d8b4fe"]];
+
 export default function UpgradeBar({ unlocked, upTab, setUpTab, skill, gold, onBuy }) {
-  const tabs = ["global", ...unlocked];
-  const isGlobal = upTab === "global";
-  const items = isGlobal ? GLOBAL_ITEMS : (WEAPON_ITEMS[upTab] || []);
-  const col = isGlobal ? "#7dd3fc" : "#fca5a5";
+  const [cat, setCat] = useState("atk");
+  const wk = unlocked.includes(upTab) ? upTab : unlocked[0];
+  const catCol = CATS.find((c) => c[0] === cat)[2];
+  const isDef = cat === "def";
+  const items = isDef ? DEF_ITEMS : (WEAPON_CATS[wk] ? WEAPON_CATS[wk][cat] : []);
 
   return (
     <>
-      <div style={{ display: "flex", gap: 5, padding: "0 10px 6px", flexShrink: 0, overflowX: "auto" }}>
-        {tabs.map((tk) => {
-          const active = upTab === tk, label = tk === "global" ? "全域" : WEAPONS[tk].name;
+      <div style={{ display: "flex", gap: 5, padding: "0 10px 5px", flexShrink: 0, overflowX: "auto" }}>
+        {unlocked.map((tk) => {
+          const active = wk === tk;
           return (
-            <button key={tk} onClick={() => setUpTab(tk)} style={{ flex: "1 0 auto", minWidth: 52, padding: "6px 8px", borderRadius: 8, border: `1px solid ${active ? (tk === "global" ? "#22d3ee" : "#f87171") : "#1e293b"}`, background: active ? (tk === "global" ? "rgba(34,211,238,0.16)" : "rgba(248,113,113,0.14)") : "rgba(15,23,42,0.5)", color: active ? (tk === "global" ? "#67e8f9" : "#fca5a5") : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>
-              {tk === "global" ? "🛡 全域" : <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Icon type={WEAPONS[tk].icon} size={13} color={active ? "#fca5a5" : "#64748b"} />{label}</span>}
+            <button key={tk} onClick={() => setUpTab(tk)} style={{ flex: "1 0 auto", minWidth: 54, padding: "5px 8px", borderRadius: 8, border: `1px solid ${active ? "#f87171" : "#1e293b"}`, background: active ? "rgba(248,113,113,0.14)" : "rgba(15,23,42,0.5)", color: active ? "#fca5a5" : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <Icon type={WEAPONS[tk].icon} size={13} color={active ? "#fca5a5" : "#64748b"} />{WEAPONS[tk].name}
             </button>
           );
         })}
+      </div>
+      <div style={{ display: "flex", gap: 5, padding: "0 10px 5px", flexShrink: 0 }}>
+        {CATS.map(([k, label, c]) => (
+          <button key={k} onClick={() => setCat(k)} style={{ flex: 1, padding: "5px 0", borderRadius: 7, border: `1px solid ${cat === k ? c : "#1e293b"}`, background: cat === k ? c + "22" : "rgba(15,23,42,0.5)", color: cat === k ? c : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>{label}</button>
+        ))}
       </div>
       <div style={{ flexShrink: 0, padding: "0 10px 10px" }}>
         <div style={{ display: "flex", gap: 6, justifyContent: items.length > 4 ? "space-between" : "space-around" }}>
           {items.map((k) => {
             const def = ITEMS[k];
-            const lvl = isGlobal ? (skill.global[k] || 0) : ((skill.weapons[upTab] && skill.weapons[upTab][k]) || 0);
+            const lvl = isDef ? (skill.global[k] || 0) : ((skill.weapons[wk] && skill.weapons[wk][k]) || 0);
             const capped = def.cap && lvl >= def.cap;
-            const c = isGlobal ? globalItemCost(skill, k) : weaponItemCost(skill, upTab, k);
+            const c = isDef ? globalItemCost(skill, k) : weaponItemCost(skill, wk, k);
             const ok = !capped && gold >= c;
-            return <Cell key={k} def={def} lvl={lvl} capped={capped} c={c} ok={ok} col={col} coupled={!isGlobal} onClick={() => onBuy(upTab, k)} />;
+            return <Cell key={k} def={def} lvl={lvl} capped={capped} c={c} ok={ok} col={catCol} coupled={!isDef} onClick={() => onBuy(isDef ? "global" : wk, k)} />;
           })}
         </div>
         <div style={{ fontSize: 9, color: "#475569", textAlign: "center", marginTop: 6 }}>
-          {isGlobal ? "全域升級對塔與所有武器生效" : "已啟用武器同時開火 · 每買一級攻擊類升級，全攻擊類價格 +1% · 長按看說明"}
+          {isDef ? "防禦為全塔共用 · 長按看說明" : "每買一級攻擊/特殊，全攻擊類價格 +1% · 長按看說明"}
         </div>
       </div>
     </>

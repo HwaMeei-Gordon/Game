@@ -8,7 +8,9 @@ import { rangeOf } from "../engine/update.js";
 export function draw(ctx, g, s, d, camera, weapons) {
   const { w, h, cx, cy, base } = d, z = camera.zoom, sc = base * z;
   const X = (wx) => cx + wx * sc, Y = (wy) => cy + wy * sc, L = (v) => v * sc;
-  const range = rangeOf(s);
+  // 攻擊圈以「已啟用武器中最遠射程」為準
+  let range = rangeOf(s);
+  if (Array.isArray(weapons) && s.weapons) for (const wk of weapons) { const w = s.weapons[wk]; if (w && wk !== "flame" && w.range > range) range = w.range; }
 
   // 背景：深空漸層
   const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.75);
