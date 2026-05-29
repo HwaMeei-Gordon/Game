@@ -9,8 +9,8 @@ export const WEAPONS = {
     desc: "射程最遠、自動追蹤，命中小範圍爆破。剋高速與螺旋，射速較慢。" },
   laser:  { name: "雷射",   icon: "laser",  dmgF: 1.7,  rateF: 1.0,  rangeF: 1.1,  spd: 1,   cont: true,  special: "持續高 DPS",
     desc: "持續鎖定光束，單體 DPS 最高。專剋重甲與首領，清群弱。" },
-  chain:  { name: "折射激光", icon: "chain", dmgF: 0.7, rateF: 0.9,  rangeF: 0.9,  spd: 1.3, cont: false, special: "彈射",
-    desc: "命中後在鄰近敵人間彈射（傷害遞減）。射程較短，清群神器。" },
+  chain:  { name: "折射激光", icon: "chain", dmgF: 0.7, rateF: 0.9,  rangeF: 1.0,  spd: 2.4, cont: false, special: "彈射",
+    desc: "高速彈，命中後在鄰近敵人間彈射（傷害遞減）。可多重發射、擊殺時分裂。清群神器。" },
   flame:  { name: "火焰",   icon: "flame",  dmgF: 0.55, rateF: 1.0,  rangeF: 1.0,  spd: 1,   cont: true,  special: "近身範圍",
     desc: "塔周圍範圍持續灼燒，同時燒多隻。射程短需放敵人逼近，近身清場強。" },
 };

@@ -22,7 +22,7 @@ export default function UpgradeBar({ unlocked, upTab, setUpTab, skill, gold, onB
         {unlocked.map((tk) => {
           const active = wk === tk;
           return (
-            <button key={tk} onClick={() => setUpTab(tk)} style={{ flex: "1 0 auto", minWidth: 54, padding: "5px 8px", borderRadius: 8, border: `1px solid ${active ? "#f87171" : "#1e293b"}`, background: active ? "rgba(248,113,113,0.14)" : "rgba(15,23,42,0.5)", color: active ? "#fca5a5" : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <button key={tk} onClick={() => setUpTab(tk)} style={{ flex: "0 0 auto", width: 76, padding: "5px 4px", borderRadius: 8, border: `1px solid ${active ? "#f87171" : "#1e293b"}`, background: active ? "rgba(248,113,113,0.14)" : "rgba(15,23,42,0.5)", color: active ? "#fca5a5" : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
               <Icon type={WEAPONS[tk].icon} size={13} color={active ? "#fca5a5" : "#64748b"} />{WEAPONS[tk].name}
             </button>
           );
@@ -34,7 +34,7 @@ export default function UpgradeBar({ unlocked, upTab, setUpTab, skill, gold, onB
         ))}
       </div>
       <div style={{ flexShrink: 0, padding: "0 10px 10px" }}>
-        <div style={{ display: "flex", gap: 6, justifyContent: items.length > 4 ? "space-between" : "space-around" }}>
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "nowrap", minHeight: 64 }}>
           {items.map((k) => {
             const def = ITEMS[k];
             const lvl = isDef ? (skill.global[k] || 0) : ((skill.weapons[wk] && skill.weapons[wk][k]) || 0);
@@ -59,7 +59,7 @@ function Cell({ def, lvl, capped, c, ok, col, coupled, onClick }) {
   const up = () => { clearTimeout(t.current); if (!longF.current && !capped && ok) onClick(); setTip(false); };
   const leave = () => { clearTimeout(t.current); setTip(false); };
   return (
-    <div style={{ position: "relative", flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center" }}>
+    <div style={{ position: "relative", width: 62, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center" }}>
       {tip && (
         <div style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)", width: 138, background: "#0b1220", border: `1px solid ${col}`, borderRadius: 8, padding: "8px 10px", zIndex: 10, fontSize: 11, color: "#e2e8f0", boxShadow: "0 4px 14px rgba(0,0,0,0.55)" }}>
           <div style={{ fontWeight: 700, color: col, marginBottom: 3 }}>{def.name}</div>

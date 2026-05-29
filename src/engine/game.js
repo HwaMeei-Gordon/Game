@@ -104,7 +104,7 @@ export function chainHit(g, s, b, first) {
   { const k0 = g.enemies.indexOf(cur); if (cur.hp <= 0) { if (k0 >= 0) killEnemy(g, s, cur, k0); if (splits > 0) { splits--; budget++; } } }
   for (let n = 0; n < budget; n++) {
     dmg *= 0.72;
-    let best = null, bd = 0.36 * 0.36;
+    let best = null, bd = 0.7 * 0.7;
     for (const e of g.enemies) { if (hit.includes(e.id)) continue; const d = (e.x - cur.x) ** 2 + (e.y - cur.y) ** 2; if (d < bd) { bd = d; best = e; } }
     if (!best) break;
     links.push({ x1: cur.x, y1: cur.y, x2: best.x, y2: best.y }); hit.push(best.id);

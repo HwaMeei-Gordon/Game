@@ -3,7 +3,6 @@ import React from "react";
 import { StatRow } from "./widgets.jsx";
 import { MONO } from "../styles.js";
 import { derive } from "../engine/stats.js";
-import { rangeOf } from "../engine/update.js";
 import { unlockedWeapons } from "../data/skillTree.js";
 import { createSkill } from "../data/skills.js";
 import { WEAPONS } from "../data/weapons.js";

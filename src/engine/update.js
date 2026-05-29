@@ -133,7 +133,8 @@ export function stepGame(g, s, dt, weapons, io) {
       for (let j = g.enemies.length - 1; j >= 0; j--) {
         const e = g.enemies[j];
         if (Math.hypot(e.x, e.y) <= ws.flameRange) {
-          damageEnemy(e, mitigateDot(ws.damage * dm, e.def) * dt);
+          const crit = Math.random() < wcrit * 0.3;
+          damageEnemy(e, mitigateDot(ws.damage * dm * (crit ? CRIT_MULT : 1), e.def) * dt);
           if (ws.flameSlow > 0) { e.slowUntil = g.t + 0.4; e.slowF = ws.flameSlow; }
           if (Math.random() < 0.15) burst(g, e.x, e.y, "#fb923c", 1);
           if (e.hp <= 0) killEnemy(g, s, e, j);
@@ -144,8 +145,12 @@ export function stepGame(g, s, dt, weapons, io) {
       if (g.fireCd[wk] <= 0 && inRange.length) {
         const bspd = ws.bulletSpeed;
         if (wk === "chain") {
-          const first = inRange[0].e, crit = Math.random() < wcrit, a = Math.atan2(first.y, first.x);
-          g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: "chain", hits: [], spd: bspd, bounces: ws.bounces, maxSplit: ws.maxSplit });
+          // 多重：朝最近的數個目標各射一道折射彈
+          const n = Math.max(1, Math.min(ws.multishot, inRange.length));
+          for (let bi = 0; bi < n; bi++) {
+            const tgt = inRange[bi].e, crit = Math.random() < wcrit, a = Math.atan2(tgt.y, tgt.x);
+            g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: "chain", hits: [], spd: bspd, bounces: ws.bounces, maxSplit: ws.maxSplit });
+          }
         } else {
           for (const { e } of inRange.slice(0, ws.multishot)) {
             const a = Math.atan2(e.y, e.x), crit = Math.random() < wcrit;
