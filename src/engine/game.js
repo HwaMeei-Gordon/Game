@@ -38,7 +38,7 @@ export function cumulativeWaveGold(startWave, diff) {
 
 export function startWave(g, num) {
   g.wave = num;
-  g.spawnQueue = Math.floor(CFG.countBase + num * CFG.countSlope);
+  g.spawnQueue = Math.min(CFG.countCap, Math.floor(CFG.countBase + num * CFG.countSlope));
   g.spawnTimer = 0;
   g.waveActive = true;
   g.immortalUsed = false;

@@ -4,7 +4,15 @@
 import { NODE_KEYS, ZERO_NODES } from "../data/skillTree.js";
 
 const A36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const VERSION = "3"; // 節點數量改變時提高版本，避免讀到舊格式
+const VERSION = "4"; // 節點數量改變時提高版本，避免讀到舊格式
+
+// v3（44 節點）的節點順序，用於從舊存檔遷移（保留鑽石/節點/最佳波次）。
+const OLD_KEYS_V3 = [
+  "core",
+  "a_dmg1", "a_rate1", "a_dmg2", "a_crit1", "a_pierce1", "a_dmg3", "W_homing", "A_multi", "A_overload", "W_laser", "a_pierce2", "a_curse", "a_berserk", "a_focus", "A_glass",
+  "d_hp1", "d_armor1", "d_hp2", "d_regen1", "d_thorn1", "d_hp3", "W_flame", "D_fortress", "D_thorn", "d_regen2", "d_curse", "d_bulwark", "d_guard", "D_immortal",
+  "m_gold1", "m_gem1", "m_gold2", "m_crit1", "m_splash1", "m_gold3", "W_chain", "M_orb", "M_lifesteal", "m_splash2", "m_curse", "m_jackpot", "m_fortune", "M_chaos",
+];
 
 function enc(n, w) { let s = ""; n = Math.max(0, Math.floor(n)); for (let i = 0; i < w; i++) { s = A36[n % 36] + s; n = Math.floor(n / 36); } return s; }
 function dec(s) { let n = 0; for (const c of s) { const i = A36.indexOf(c); if (i < 0) return null; n = n * 36 + i; } return n; }
@@ -34,6 +42,24 @@ export function decodeSave(str) {
   if (!bits || diamonds === null) return null;
   const nodes = { ...ZERO_NODES }; NODE_KEYS.forEach((k, i) => (nodes[k] = bits[i]));
   const bestWave = dec(s.slice(6 + NCHUNK, 6 + NCHUNK + 2));
+  if (bestWave === null) return null;
+  return { diamonds, nodes, bestWave };
+}
+
+// 從舊版 v3 字串（44 節點）解出進度，節點依 id 對應到目前的節點集合。
+export function legacyDecodeV3(str) {
+  const s = (str || "").toUpperCase().replace(/[^0-9A-Z]/g, "");
+  const oldChunk = Math.ceil(OLD_KEYS_V3.length / 5);
+  const N = 1 + 5 + oldChunk + 2 + 2;
+  if (s.length !== N || s[0] !== "3") return null;
+  const body = s.slice(0, N - 2), chk = s.slice(N - 2);
+  let sum = 0; for (const c of body) sum += c.charCodeAt(0);
+  if (enc(sum % 1296, 2) !== chk) return null;
+  const diamonds = dec(s.slice(1, 6));
+  const bits = unpackBits(s.slice(6, 6 + oldChunk), OLD_KEYS_V3.length);
+  if (!bits || diamonds === null) return null;
+  const nodes = {}; OLD_KEYS_V3.forEach((k, i) => (nodes[k] = bits[i]));
+  const bestWave = dec(s.slice(6 + oldChunk, 6 + oldChunk + 2));
   if (bestWave === null) return null;
   return { diamonds, nodes, bestWave };
 }

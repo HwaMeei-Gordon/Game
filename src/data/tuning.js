@@ -6,10 +6,12 @@ export const CFG = {
   hpScaleBase: 1.16,   // 血量成長
   atkScaleBase: 1.07,  // 攻擊成長
   defScaleBase: 1.04,  // 防禦成長
-  spdScaleBase: 1.015, // 移動速度成長
+  spdScaleBase: 1.012, // 移動速度成長（微幅）
+  spdScaleCap: 1.9,    // 移速成長上限（避免後期快到無法反應）
   baseRegen: 1.0,      // 塔的基礎回血
   countBase: 3,        // 每波敵人數量基底
-  countSlope: 1.0,     // 每波 +1 敵人
+  countSlope: 0.6,     // 每波 +0.6 敵人（微幅）
+  countCap: 22,        // 每波敵人數量上限
   waveGoldBase: 10,    // 過波獎勵金幣基底
   waveGoldSlope: 5,    // 每波 +5 金幣
 };
@@ -23,7 +25,7 @@ export const WORLD = {
   rangeBase: 1.0,     // 基礎射程
   rangeStep: 0.1,     // 每級射程
   rangeMax: 1.95,     // 射程上限
-  bulletSpd: 4.2,     // 子彈速度
+  bulletSpd: 1.05,    // 子彈基礎速度（已較舊版減慢 75%，靠「彈速」技能加回）
   orbR: 0.36,         // 無人機環繞半徑
   orbDpsF: 0.8,       // 無人機 DPS 係數（× 塔傷害）
   novaPush: 0.6,      // 新星擊退距離

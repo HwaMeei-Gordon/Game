@@ -9,7 +9,7 @@ import { ZERO_SKILL, findSkill, skillCost } from "./data/skills.js";
 import { ZERO_NODES, nodeById, isBig, countBig, isNodeUnlocked, MAX_BIG, unlockedWeapons, spentDiamonds, resetFee } from "./data/skillTree.js";
 import { HEADSTART_OFFSET } from "./data/modes.js";
 import { derive } from "./engine/stats.js";
-import { encodeSave, decodeSave } from "./engine/save.js";
+import { legacyDecodeV3 } from "./engine/save.js";
 import { createRun, cumulativeWaveGold } from "./engine/game.js";
 import { stepGame, triggerAbility } from "./engine/update.js";
 import { draw } from "./render/draw.js";
@@ -26,17 +26,24 @@ import EnemyPanel from "./components/EnemyPanel.jsx";
 import CodesOverlay from "./components/CodesOverlay.jsx";
 import Settings from "./components/Settings.jsx";
 
-// 自動存檔：把進度寫進這支手機/瀏覽器的 localStorage（同裝置關掉重開都還在）。
-// 進度代碼則用於換裝置/備份。鍵名含版本，存檔格式改變時不會誤讀舊資料。
-// bestKills（無限生存最佳擊殺）另存一支 key，不放進可攜的進度代碼。
-const SAVE_KEY = "thetower_save_v3";
+// 自動存檔：本機進度以 JSON 保存（對「新增節點」具前向相容，不會被清空）。
+// 進度代碼（CodesOverlay）才用編碼字串，供換裝置/備份。
+// bestKills（無限生存最佳擊殺）另存一支 key。
+const META_KEY = "thetower_meta";
+const OLD_V3_KEY = "thetower_save_v3"; // 舊版自動存檔字串，啟動時一次性遷移
 const BESTKILLS_KEY = "thetower_bestkills";
 function loadMeta() {
   let bestKills = 0;
   try { bestKills = parseInt(localStorage.getItem(BESTKILLS_KEY) || "0", 10) || 0; } catch {}
+  // 1) 新版 JSON
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (raw) { const r = decodeSave(raw); if (r) return { diamonds: r.diamonds, nodes: { ...ZERO_NODES, ...r.nodes }, bestWave: r.bestWave, bestKills }; }
+    const j = JSON.parse(localStorage.getItem(META_KEY) || "null");
+    if (j && typeof j.diamonds === "number") return { diamonds: j.diamonds, nodes: { ...ZERO_NODES, ...(j.nodes || {}) }, bestWave: j.bestWave || 1, bestKills };
+  } catch {}
+  // 2) 從舊版 v3 字串遷移（保留鑽石/節點/最佳波次）
+  try {
+    const r = legacyDecodeV3(localStorage.getItem(OLD_V3_KEY));
+    if (r) return { diamonds: r.diamonds, nodes: { ...ZERO_NODES, ...r.nodes }, bestWave: r.bestWave, bestKills };
   } catch {}
   return { diamonds: 0, nodes: { ...ZERO_NODES }, bestWave: 1, bestKills };
 }
@@ -56,7 +63,7 @@ export default function App() {
   const [metaV, setMetaV] = useState(metaRef.current);
   const commitMeta = useCallback(() => setMetaV({ diamonds: metaRef.current.diamonds, nodes: { ...metaRef.current.nodes }, bestWave: metaRef.current.bestWave, bestKills: metaRef.current.bestKills || 0 }), []);
   // 進度每次變動就自動寫回本機（涵蓋升級、買節點、讀代碼、過波/死亡結算）。
-  useEffect(() => { try { localStorage.setItem(SAVE_KEY, encodeSave(metaV.diamonds, metaV.nodes, metaV.bestWave)); } catch {} }, [metaV]);
+  useEffect(() => { try { localStorage.setItem(META_KEY, JSON.stringify({ diamonds: metaV.diamonds, nodes: metaV.nodes, bestWave: metaV.bestWave })); } catch {} }, [metaV]);
   useEffect(() => { try { localStorage.setItem(BESTKILLS_KEY, String(metaV.bestKills || 0)); } catch {} }, [metaV.bestKills]);
 
   const skillRef = useRef({ ...ZERO_SKILL });
@@ -72,6 +79,12 @@ export default function App() {
   const pausedRef = useRef(false);
   useEffect(() => { pausedRef.current = paused || overlay != null; }, [paused, overlay]);
   useEffect(() => { weaponRef.current = weapon; }, [weapon]);
+
+  // 倍速（1x / 2x / 4x）：以多次模擬子步驟達成，物理穩定。
+  const [speed, setSpeed] = useState(1);
+  const speedRef = useRef(1);
+  useEffect(() => { speedRef.current = speed; }, [speed]);
+  const cycleSpeed = () => setSpeed((v) => (v === 1 ? 2 : v === 2 ? 4 : 1));
 
   // 音訊：分開的音樂/音效開關（持久化於 audio 模組）。
   const [sfxOn, setSfxOn] = useState(audio.getSfx());
@@ -142,7 +155,7 @@ export default function App() {
     if (triggerAbility(g, statsRef.current, k)) { setCds({ ...g.cds }); audio.play("ability"); }
   }, []);
 
-  const startGame = (dk, mode = "classic") => { newRun(dk, mode); setWeapon(DEFAULT_WEAPON); setOverlay(null); setPaused(false); setSkillCat("attack"); setScreen("playing"); };
+  const startGame = (dk, mode = "classic") => { newRun(dk, mode); setWeapon(DEFAULT_WEAPON); setOverlay(null); setPaused(false); setSpeed(1); setSkillCat("attack"); setScreen("playing"); };
   const toMenu = () => { setScreen("menu"); setOverlay(null); };
   const restart = () => { newRun(game.current.diffKey, game.current.mode); setWeapon(DEFAULT_WEAPON); setPaused(false); setSkillCat("attack"); };
 
@@ -183,7 +196,7 @@ export default function App() {
     const loop = (now) => {
       let dt = (now - last) / 1000; last = now; if (dt > 0.05) dt = 0.05;
       const g = game.current, s = statsRef.current;
-      if (!pausedRef.current && !g.gameOver) stepGame(g, s, dt, weaponRef.current, io.current);
+      if (!pausedRef.current && !g.gameOver) { const steps = speedRef.current; for (let i = 0; i < steps; i++) stepGame(g, s, dt, weaponRef.current, io.current); }
       // 播放本幀累積的音效（限量避免一次太多）。
       if (g.sounds && g.sounds.length) { const n = Math.min(g.sounds.length, 4); for (let i = 0; i < n; i++) audio.play(g.sounds[i]); g.sounds.length = 0; }
       draw(ctx, g, s, dims.current, cam.current, weaponRef.current);
@@ -217,6 +230,7 @@ export default function App() {
           wrapRef={wrapRef} canvasRef={canvasRef} hud={hud} diamonds={metaV.diamonds} bestKills={metaV.bestKills} paused={paused}
           onMenu={toMenu} onPause={() => setPaused((p) => !p)} onOpenStats={() => setOverlay("stats")} onOpenDex={() => setOverlay("dex")} onOpenSettings={() => setOverlay("settings")} onRestart={restart}
           unlockedWeapons={uw} weapon={weapon} setWeapon={setWeapon}
+          speed={speed} onCycleSpeed={cycleSpeed}
           cds={cds} onUseAbility={useAbility}
           skillCat={skillCat} setSkillCat={setSkillCat} skillV={skillV} onBuySkill={buySkill}
         />

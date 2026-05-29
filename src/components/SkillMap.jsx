@@ -16,7 +16,7 @@ const nodeR = (n) => (n.t === "keystone" ? 32 : isBig(n) ? 28 : n.t === "weapon"
 export default function SkillMap({ nodes, diamonds, onBuy, onReset }) {
   const [sel, setSel] = useState("core");
   const [armed, setArmed] = useState(false);
-  const [view, setView] = useState({ tx: 0, ty: 0, zoom: 1.0 });
+  const [view, setView] = useState({ tx: 0, ty: -170, zoom: 0.78 });
   const box = useRef(null);
   const drag = useRef({ down: false, moved: false, sx: 0, sy: 0, otx: 0, oty: 0, lp: null, lpFired: false });
   const pinch = useRef({ active: false, d0: 0, oz: 1 });

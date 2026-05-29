@@ -2,7 +2,7 @@
 // 把「永久技能地圖節點」+「局內技能等級」換算成實際戰鬥數值。
 // 這是數值面板與戰鬥共用的單一真相來源。
 import { sumBonus } from "../data/skillTree.js";
-import { CFG } from "../data/tuning.js";
+import { CFG, WORLD } from "../data/tuning.js";
 import { ENEMIES } from "../data/enemies.js";
 
 export function derive(nodes, skill) {
@@ -25,10 +25,12 @@ export function derive(nodes, skill) {
     maxHp: (100 + skill.hp * 30) * hpM,
     regen: skill.regen * 1.4 + G("regen") + CFG.baseRegen,
     armor: glass ? 0 : skill.armor * 1.5 + G("armor"),
-    multishot: 1 + skill.multi + G("multishot"),
+    multishot: 1 + G("multishot"),
     pierce: 1 + skill.pierce + G("pierce"),
     thorns: G("thorns"),
     splash: skill.splash * 0.12 + G("splash"),
+    bulletSpeed: WORLD.bulletSpd * (1 + skill.bspd * 0.3),
+    splashRadius: WORLD.splashR * (1 + skill.splashR * 0.25),
     critChance: skill.crit * 0.05 + G("critC"),
     orbs: G("orbs"),
     gemYield: 1 + G("gem"),

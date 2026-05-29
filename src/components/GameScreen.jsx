@@ -13,6 +13,7 @@ export default function GameScreen(props) {
     wrapRef, canvasRef, hud, diamonds, bestKills = 0, paused,
     onMenu, onPause, onOpenStats, onOpenDex, onOpenSettings, onRestart,
     unlockedWeapons, weapon, setWeapon,
+    speed = 1, onCycleSpeed,
     cds, onUseAbility,
     skillCat, setSkillCat, skillV, onBuySkill,
   } = props;
@@ -26,6 +27,7 @@ export default function GameScreen(props) {
       <div ref={wrapRef} style={{ flex: "1 1 auto", minHeight: 0, position: "relative", touchAction: "none" }}>
         <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
         <div style={{ position: "absolute", top: 6, right: 8, fontSize: 9, color: "#475569" }}>雙指縮放</div>
+        <button onClick={onCycleSpeed} style={{ position: "absolute", top: 6, left: 8, padding: "4px 10px", borderRadius: 8, border: `1px solid ${speed > 1 ? "#fbbf24" : "#334155"}`, background: speed > 1 ? "rgba(251,191,36,0.18)" : "rgba(15,23,42,0.75)", color: speed > 1 ? "#fcd34d" : "#cbd5e1", fontFamily: MONO, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{speed}×</button>
         {paused && !hud.gameOver && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", gap: 14, alignItems: "center", justifyContent: "center", background: "rgba(4,6,10,0.55)" }}>
             <span style={{ fontFamily: MONO, fontSize: 22, color: "#67e8f9", letterSpacing: 2 }}>⏸ 已暫停</span>

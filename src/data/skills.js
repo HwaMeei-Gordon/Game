@@ -8,7 +8,7 @@ export const TREE = {
     dmg:   { name: "攻擊力", icon: "dmg",   base: 10, mult: 1.14,          fmt: (l) => `+${l * 5} 傷害`,            nxt: "+5 傷害" },
     rate:  { name: "攻速",   icon: "rate",  base: 14, mult: 1.18, cap: 16, fmt: (l) => `+${(l * 0.12).toFixed(2)}/s`, nxt: "+0.12 次/秒" },
     range: { name: "範圍",   icon: "range", base: 12, mult: 1.15, cap: 9,  fmt: (l) => `+${l} 射程`,                nxt: "+1 射程" },
-    multi: { name: "多重",   icon: "multi", base: 60, mult: 1.7,  cap: 4,  fmt: (l) => `+${l} 發`,                  nxt: "+1 發子彈" },
+    bspd:  { name: "彈速",   icon: "homing", base: 16, mult: 1.16, cap: 8, fmt: (l) => `彈速 +${l * 30}%`,          nxt: "+30% 子彈速度" },
   }},
   defense: { name: "防禦", col: "#7dd3fc", items: {
     hp:    { name: "生命", icon: "hp",    base: 12, mult: 1.15, fmt: (l) => `+${l * 30} 生命`,        nxt: "+30 生命" },
@@ -19,10 +19,11 @@ export const TREE = {
     pierce: { name: "穿透", icon: "pierce", base: 50, mult: 1.6, cap: 4,  fmt: (l) => `貫穿 ${l}`,       nxt: "+1 貫穿" },
     crit:   { name: "暴擊", icon: "crit",   base: 45, mult: 1.5, cap: 10, fmt: (l) => `暴擊 ${l * 5}%`,  nxt: "+5% 暴擊率" },
     splash: { name: "濺射", icon: "splash", base: 55, mult: 1.6, cap: 8,  fmt: (l) => `濺射 ${l * 12}%`, nxt: "+12% 濺射傷害" },
+    splashR:{ name: "濺射範圍", icon: "range", base: 55, mult: 1.5, cap: 6, fmt: (l) => `範圍 +${l * 25}%`, nxt: "+25% 濺射範圍" },
   }},
 };
 
-export const SKILL_KEYS = ["dmg", "rate", "range", "multi", "hp", "regen", "armor", "pierce", "crit", "splash"];
+export const SKILL_KEYS = ["dmg", "rate", "range", "bspd", "hp", "regen", "armor", "pierce", "crit", "splash", "splashR"];
 export const ZERO_SKILL = Object.fromEntries(SKILL_KEYS.map((k) => [k, 0]));
 
 export function findSkill(k) { for (const c in TREE) if (TREE[c].items[k]) return TREE[c].items[k]; }
