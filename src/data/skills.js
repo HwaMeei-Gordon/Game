@@ -17,6 +17,13 @@ export const ITEMS = {
   bounce: { name: "彈射", icon: "chain",  base: 50, mult: 1.6,  cap: 4,  fmt: (l) => `+${l} 彈射` },
   frange: { name: "火域", icon: "flame",  base: 40, mult: 1.4,  cap: 8,  fmt: (l) => `火域 +${l * 12}%` },
   crit:   { name: "暴擊", icon: "crit",   base: 45, mult: 1.5,  cap: 10, fmt: (l) => `暴擊 +${l * 5}%` },
+  // 雷射專屬
+  ltick:  { name: "計算頻率", icon: "rate", base: 55, mult: 1.4, cap: 6, fmt: (l) => `傷害計算頻率 +${l * 40}%` },
+  lamp:   { name: "傷害增幅", icon: "dmg",  base: 60, mult: 1.45, cap: 8, fmt: (l) => `持續同目標每跳 +${(0.1 + l * 0.15).toFixed(2)}%` },
+  // 折射專屬
+  split:  { name: "分裂", icon: "chain",  base: 120, mult: 1.7, cap: 3, fmt: (l) => `擊殺時額外折射 ${l}（上限3）` },
+  // 火焰專屬
+  slow:   { name: "減速", icon: "orb",    base: 55, mult: 1.4, cap: 5, fmt: (l) => `灼燒減速 ${Math.min(60, l * 12)}%` },
   // 防禦類（全塔共用）
   hp:     { name: "生命", icon: "hp",    base: 12, mult: 1.15,          fmt: (l) => `+${l * 30} 生命` },
   regen:  { name: "恢復", icon: "regen", base: 16, mult: 1.18,          fmt: (l) => `+${(l * 1.4).toFixed(1)}/s` },
@@ -29,10 +36,10 @@ export const DEF_ITEMS = ["hp", "regen", "armor"];
 // 各武器的 攻擊類 / 特殊類（存於 skill.weapons[wk]，只放對該武器有用的）
 export const WEAPON_CATS = {
   cannon: { atk: ["dmg", "rate", "bspd", "wrange"], sp: ["multi", "pierce", "splash", "crit"] },
-  homing: { atk: ["dmg", "rate", "bspd", "wrange"], sp: ["multi", "splash", "crit"] },
-  laser:  { atk: ["dmg", "wrange"],                 sp: ["multi", "crit"] },
-  chain:  { atk: ["dmg", "rate", "bspd", "wrange"], sp: ["bounce", "multi", "crit"] },
-  flame:  { atk: ["dmg", "frange"],                 sp: ["crit"] },
+  homing: { atk: ["dmg", "rate", "bspd", "wrange"], sp: ["multi", "splash", "pierce", "crit"] },
+  laser:  { atk: ["dmg", "wrange", "ltick", "lamp"], sp: ["multi", "crit"] },
+  chain:  { atk: ["dmg", "rate", "bspd", "wrange"], sp: ["bounce", "multi", "split", "crit"] },
+  flame:  { atk: ["dmg", "frange"],                 sp: ["slow", "crit"] },
 };
 // 每把武器所有可升項目（atk+sp 扁平），供建立狀態用
 export const WEAPON_ITEMS = {};

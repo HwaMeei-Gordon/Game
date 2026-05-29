@@ -63,6 +63,13 @@ export function derive(meta, skill) {
       flameRange,
       bulletSpeed: WORLD.bulletSpd * wp.spd * (1 + (ws.bspd || 0) * 0.3),
       splashRadius: WORLD.splashR,
+      // 雷射：傷害計算頻率（tick 間隔，越小越頻繁）與每跳傷害增幅
+      tickInterval: Math.max(0.02, 0.12 / (1 + (ws.ltick || 0) * 0.4)),
+      rampPerTick: 0.001 + (ws.lamp || 0) * 0.0015,
+      // 折射：擊殺時額外折射數（上限 3）
+      maxSplit: Math.min(3, ws.split || 0),
+      // 火焰：減速幅度（移速扣除比例）
+      flameSlow: Math.min(0.6, (ws.slow || 0) * 0.12),
     };
   }
   out.range = baseRange; // 代表射程（畫面外圈參考）

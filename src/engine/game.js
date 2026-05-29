@@ -99,16 +99,18 @@ export function chainHit(g, s, b, first) {
   const links = [{ x1: b.x, y1: b.y, x2: first.x, y2: first.y }];
   let dmg = b.dmg;
   damageEnemy(cur, mitigate(dmg, cur.def));
-  const k0 = g.enemies.indexOf(cur); if (cur.hp <= 0 && k0 >= 0) killEnemy(g, s, cur, k0);
-  const maxBounce = (b.bounces || 3);
-  for (let n = 0; n < maxBounce; n++) {
+  let splits = b.maxSplit || 0; // 折射分裂：剛好擊殺時額外折射（上限由 maxSplit 決定）
+  let budget = b.bounces || 3;
+  { const k0 = g.enemies.indexOf(cur); if (cur.hp <= 0) { if (k0 >= 0) killEnemy(g, s, cur, k0); if (splits > 0) { splits--; budget++; } } }
+  for (let n = 0; n < budget; n++) {
     dmg *= 0.72;
     let best = null, bd = 0.36 * 0.36;
     for (const e of g.enemies) { if (hit.includes(e.id)) continue; const d = (e.x - cur.x) ** 2 + (e.y - cur.y) ** 2; if (d < bd) { bd = d; best = e; } }
     if (!best) break;
     links.push({ x1: cur.x, y1: cur.y, x2: best.x, y2: best.y }); hit.push(best.id);
     damageEnemy(best, mitigate(dmg, best.def));
-    const k = g.enemies.indexOf(best); if (best.hp <= 0 && k >= 0) killEnemy(g, s, best, k);
+    const k = g.enemies.indexOf(best);
+    if (best.hp <= 0) { if (k >= 0) killEnemy(g, s, best, k); if (splits > 0) { splits--; budget++; } } // 擊殺→額外折射
     cur = best;
   }
   for (const l of links) g.beams.push({ ...l, col: "#a5b4fc", life: 0.14, wgt: 2.4 });

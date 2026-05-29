@@ -54,12 +54,14 @@ export function stepGame(g, s, dt, weapons, io) {
   }
 
   // 敵人移動 / 荊棘 / 撞塔
-  const slow = g.buffs.frost > 0 ? 0.35 : 1;
+  const frost = g.buffs.frost > 0 ? 0.35 : 1;
   const spdScale = Math.min(CFG.spdScaleCap, Math.pow(CFG.spdScaleBase, g.wave - 1));
   for (let i = g.enemies.length - 1; i >= 0; i--) {
     const e = g.enemies[i], dist = Math.hypot(e.x, e.y) || 1, rim = WORLD.tower + e.r;
     e.rot += dt * 1.4;
     if (e.maxShield > 0 && e.shield < e.maxShield) e.shield = Math.min(e.maxShield, e.shield + e.maxShield * 0.04 * dt);
+    // 冰霜（全域）+ 火焰減速（個別、短時）
+    const slow = frost * (e.slowUntil > g.t ? (1 - (e.slowF || 0)) : 1);
     if (dist > rim) {
       if (e.move === "weave") {
         const inward = e.sr * spdScale * slow, ang = Math.atan2(e.y, e.x);
@@ -110,17 +112,29 @@ export function stepGame(g, s, dt, weapons, io) {
     const inRange = byDist.filter((o) => o.dd <= ws.range);
     const wcrit = ws.critChance || 0;
     if (wk === "laser") {
-      for (const { e } of inRange.slice(0, ws.multishot)) {
-        const crit = Math.random() < wcrit * 0.3;
-        damageEnemy(e, mitigateDot(ws.damage * dm * (crit ? CRIT_MULT : 1), e.def) * dt);
-        g.beams.push({ x1: 0, y1: 0, x2: e.x, y2: e.y, col: "#67e8f9", life: 0.05, wgt: 3 });
-        if (e.hp <= 0) { const j = g.enemies.indexOf(e); if (j >= 0) killEnemy(g, s, e, j); }
+      // 持續鎖定：光束每幀畫；傷害以 tickInterval 結算，持續打同目標時每跳等比增傷
+      const targets = inRange.slice(0, ws.multishot);
+      for (const { e } of targets) g.beams.push({ x1: 0, y1: 0, x2: e.x, y2: e.y, col: "#67e8f9", life: 0.05, wgt: 3 });
+      g.laserAcc = (g.laserAcc || 0) + dt;
+      if (g.laserAcc >= ws.tickInterval) {
+        g.laserAcc -= ws.tickInterval;
+        const ids = new Set();
+        for (const { e } of targets) {
+          ids.add(e.id);
+          e.lstack = Math.min(800, (e.lstack || 0) + 1);
+          const ramp = Math.min(3, Math.pow(1 + ws.rampPerTick, e.lstack));
+          const crit = Math.random() < wcrit * 0.3;
+          damageEnemy(e, mitigateDot(ws.damage * ramp * dm * (crit ? CRIT_MULT : 1), e.def) * ws.tickInterval);
+          if (e.hp <= 0) { const j = g.enemies.indexOf(e); if (j >= 0) killEnemy(g, s, e, j); }
+        }
+        for (const e of g.enemies) if (!ids.has(e.id) && e.lstack) e.lstack = Math.max(0, e.lstack - 3); // 換目標即衰退
       }
     } else if (wk === "flame") {
       for (let j = g.enemies.length - 1; j >= 0; j--) {
         const e = g.enemies[j];
         if (Math.hypot(e.x, e.y) <= ws.flameRange) {
           damageEnemy(e, mitigateDot(ws.damage * dm, e.def) * dt);
+          if (ws.flameSlow > 0) { e.slowUntil = g.t + 0.4; e.slowF = ws.flameSlow; }
           if (Math.random() < 0.15) burst(g, e.x, e.y, "#fb923c", 1);
           if (e.hp <= 0) killEnemy(g, s, e, j);
         }
@@ -131,7 +145,7 @@ export function stepGame(g, s, dt, weapons, io) {
         const bspd = ws.bulletSpeed;
         if (wk === "chain") {
           const first = inRange[0].e, crit = Math.random() < wcrit, a = Math.atan2(first.y, first.x);
-          g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: "chain", hits: [], spd: bspd, bounces: ws.bounces });
+          g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: "chain", hits: [], spd: bspd, bounces: ws.bounces, maxSplit: ws.maxSplit });
         } else {
           for (const { e } of inRange.slice(0, ws.multishot)) {
             const a = Math.atan2(e.y, e.x), crit = Math.random() < wcrit;
@@ -176,7 +190,8 @@ export function stepGame(g, s, dt, weapons, io) {
         }
         if (e.hp <= 0) { const k = g.enemies.indexOf(e); if (k >= 0) killEnemy(g, s, e, k); }
         else burst(g, b.x, b.y, b.crit ? "#fff" : "#fde68a", b.crit ? 4 : 2);
-        if (b.type === "homing") dead = true; else { b.pierce -= 1; if (b.pierce <= 0) dead = true; }
+        // 標準彈與追蹤彈都用穿透計數（hits 已記錄，穿透後不會再打同一目標）
+        b.pierce -= 1; if (b.pierce <= 0) dead = true;
         break;
       }
     }
