@@ -15,7 +15,7 @@ export function createRun(diffKey, stats, opts = {}) {
     diff: DIFF[diffKey], diffKey, mode,
     wave: 1, waveActive: true, spawnQueue: 0, spawnTimer: 0, cooldown: 0, immortalUsed: false,
     enemies: [], bullets: [], beams: [], particles: [], fx: [],
-    eid: 0, fireCd: 0, orbAngle: 0,
+    eid: 0, fireCd: {}, orbAngle: 0,
     buffs: { over: 0, frost: 0 },
     cds: { over: 0, nova: 0, frost: 0, repair: 0 },
     gameOver: false, t: 0,
@@ -100,7 +100,8 @@ export function chainHit(g, s, b, first) {
   let dmg = b.dmg;
   damageEnemy(cur, mitigate(dmg, cur.def));
   const k0 = g.enemies.indexOf(cur); if (cur.hp <= 0 && k0 >= 0) killEnemy(g, s, cur, k0);
-  for (let n = 0; n < 3; n++) {
+  const maxBounce = (b.bounces || 3);
+  for (let n = 0; n < maxBounce; n++) {
     dmg *= 0.72;
     let best = null, bd = 0.36 * 0.36;
     for (const e of g.enemies) { if (hit.includes(e.id)) continue; const d = (e.x - cur.x) ** 2 + (e.y - cur.y) ** 2; if (d < bd) { bd = d; best = e; } }

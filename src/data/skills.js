@@ -1,37 +1,69 @@
-// ── 資料：局內技能（金幣即時升級） ──────────────────────────
-// 這些是「一局之內」用金幣購買的升級，死亡後歸零。
-// 與永久的「技能地圖」(skillTree.js) 不同。
-//
-// base：第 1 級花費 · mult：每級花費倍率 · cap：等級上限 · fmt：目前數值文字 · nxt：下一級增益
-export const TREE = {
-  attack: { name: "攻擊", col: "#fca5a5", items: {
-    dmg:   { name: "攻擊力", icon: "dmg",   base: 10, mult: 1.14,          fmt: (l) => `+${l * 5} 傷害`,            nxt: "+5 傷害" },
-    rate:  { name: "攻速",   icon: "rate",  base: 14, mult: 1.18, cap: 16, fmt: (l) => `+${(l * 0.12).toFixed(2)}/s`, nxt: "+0.12 次/秒" },
-    range: { name: "範圍",   icon: "range", base: 12, mult: 1.15, cap: 9,  fmt: (l) => `+${l} 射程`,                nxt: "+1 射程" },
-    bspd:  { name: "彈速",   icon: "homing", base: 16, mult: 1.16, cap: 8, fmt: (l) => `彈速 +${l * 30}%`,          nxt: "+30% 子彈速度" },
-  }},
-  defense: { name: "防禦", col: "#7dd3fc", items: {
-    hp:    { name: "生命", icon: "hp",    base: 12, mult: 1.15, fmt: (l) => `+${l * 30} 生命`,        nxt: "+30 生命" },
-    regen: { name: "恢復", icon: "regen", base: 16, mult: 1.18, fmt: (l) => `+${(l * 1.4).toFixed(1)}/s`, nxt: "+1.4 生命/秒" },
-    armor: { name: "護甲", icon: "armor", base: 20, mult: 1.20, fmt: (l) => `+${(l * 1.5).toFixed(0)} 護甲`, nxt: "+1.5 護甲" },
-  }},
-  special: { name: "特殊", col: "#d8b4fe", items: {
-    pierce: { name: "穿透", icon: "pierce", base: 50, mult: 1.6, cap: 4,  fmt: (l) => `貫穿 ${l}`,       nxt: "+1 貫穿" },
-    crit:   { name: "暴擊", icon: "crit",   base: 45, mult: 1.5, cap: 10, fmt: (l) => `暴擊 ${l * 5}%`,  nxt: "+5% 暴擊率" },
-    splash: { name: "濺射", icon: "splash", base: 55, mult: 1.6, cap: 8,  fmt: (l) => `濺射 ${l * 12}%`, nxt: "+12% 濺射傷害" },
-    splashR:{ name: "濺射範圍", icon: "range", base: 55, mult: 1.5, cap: 6, fmt: (l) => `範圍 +${l * 25}%`, nxt: "+25% 濺射範圍" },
-  }},
+// ── 資料：局內升級（金幣，多武器系統） ──────────────────────
+// 設計：所有已解鎖武器「同時開火」，但每把武器各自獨立加點。
+//  - 攻擊類升級屬於各武器（每把分開記等級）。
+//  - 同一項目在「所有武器」的等級會累加，作為該項目的「漲價依據」：
+//    在 A 武器升某項，B 武器的同項目也會變貴（weaponItemCost 用跨武器總等級）。
+//  - 不同武器有不同的可升項目（例：雷射沒有穿透，火焰只有傷害與火域）。
+//  - 全域(塔)升級：生命/恢復/護甲/範圍/暴擊，對所有武器與塔生效，單獨計價。
+
+// 升級項目主表（base：首級花費 · mult：每級漲價 · cap：上限 · fmt：目前數值文字）
+export const ITEMS = {
+  // 武器類
+  dmg:    { name: "傷害", icon: "dmg",    base: 12, mult: 1.14,          fmt: (l) => `+${l * 5} 傷害` },
+  rate:   { name: "攻速", icon: "rate",   base: 16, mult: 1.18, cap: 14, fmt: (l) => `+${(l * 0.12).toFixed(2)}/s` },
+  multi:  { name: "多重", icon: "multi",  base: 55, mult: 1.6,  cap: 4,  fmt: (l) => `+${l} 發/束` },
+  pierce: { name: "穿透", icon: "pierce", base: 50, mult: 1.6,  cap: 4,  fmt: (l) => `貫穿 ${l}` },
+  splash: { name: "濺射", icon: "splash", base: 50, mult: 1.55, cap: 8,  fmt: (l) => `濺射 +${l * 12}%` },
+  bounce: { name: "彈射", icon: "chain",  base: 50, mult: 1.6,  cap: 4,  fmt: (l) => `+${l} 彈射` },
+  frange: { name: "火域", icon: "flame",  base: 40, mult: 1.4,  cap: 8,  fmt: (l) => `火焰範圍 +${l * 12}%` },
+  bspd:   { name: "彈速", icon: "homing", base: 16, mult: 1.16, cap: 8,  fmt: (l) => `彈速 +${l * 30}%` },
+  // 全域(塔)
+  hp:     { name: "生命", icon: "hp",    base: 12, mult: 1.15,          fmt: (l) => `+${l * 30} 生命` },
+  regen:  { name: "恢復", icon: "regen", base: 16, mult: 1.18,          fmt: (l) => `+${(l * 1.4).toFixed(1)}/s` },
+  armor:  { name: "護甲", icon: "armor", base: 20, mult: 1.20,          fmt: (l) => `+${(l * 1.5).toFixed(0)} 護甲` },
+  range:  { name: "範圍", icon: "range", base: 14, mult: 1.15, cap: 9,  fmt: (l) => `+${l} 射程` },
+  crit:   { name: "暴擊", icon: "crit",  base: 45, mult: 1.50, cap: 10, fmt: (l) => `暴擊 ${l * 5}%` },
 };
 
-export const SKILL_KEYS = ["dmg", "rate", "range", "bspd", "hp", "regen", "armor", "pierce", "crit", "splash", "splashR"];
-export const ZERO_SKILL = Object.fromEntries(SKILL_KEYS.map((k) => [k, 0]));
+export const GLOBAL_ITEMS = ["hp", "regen", "armor", "range", "crit"];
 
-export function findSkill(k) { for (const c in TREE) if (TREE[c].items[k]) return TREE[c].items[k]; }
-export const skillCost = (def, lvl) => Math.floor(def.base * Math.pow(def.mult, lvl));
+// 各武器可升的項目（刻意不同：雷射無穿透、火焰只有傷害與火域等）
+export const WEAPON_ITEMS = {
+  cannon: ["dmg", "rate", "multi", "pierce", "splash", "bspd"],
+  homing: ["dmg", "rate", "multi", "splash", "bspd"],
+  laser:  ["dmg", "multi"],                 // multi = 同時鎖定光束數
+  chain:  ["dmg", "rate", "bounce", "bspd"],
+  flame:  ["dmg", "frange"],
+};
+
+// 建立一份歸零的局內升級狀態
+export function createSkill() {
+  const weapons = {};
+  for (const wk in WEAPON_ITEMS) { const o = {}; for (const k of WEAPON_ITEMS[wk]) o[k] = 0; weapons[wk] = o; }
+  const global = {}; for (const k of GLOBAL_ITEMS) global[k] = 0;
+  return { global, weapons };
+}
+export function cloneSkill(s) {
+  const weapons = {}; for (const wk in s.weapons) weapons[wk] = { ...s.weapons[wk] };
+  return { global: { ...s.global }, weapons };
+}
+
+// 某武器項目在「所有武器」的累計等級（漲價依據）
+export function weaponItemTotal(skill, itemKey) {
+  let t = 0; for (const wk in skill.weapons) { const v = skill.weapons[wk]; if (v && v[itemKey]) t += v[itemKey]; } return t;
+}
+// 武器項目花費：以跨武器總等級指數成長（在別把武器升級，這把也會變貴）
+export function weaponItemCost(skill, itemKey) {
+  const def = ITEMS[itemKey]; return Math.floor(def.base * Math.pow(def.mult, weaponItemTotal(skill, itemKey)));
+}
+// 全域項目花費：以自身等級成長
+export function globalItemCost(skill, itemKey) {
+  const def = ITEMS[itemKey]; return Math.floor(def.base * Math.pow(def.mult, skill.global[itemKey] || 0));
+}
 
 // 主動技能（CD 觸發）。
 export const ABILITIES = [
-  { key: "over",   name: "過載", icon: "⚡", cd: 16, dur: 6, color: "#fbbf24", info: "6 秒內傷害 ×3。" },
+  { key: "over",   name: "過載", icon: "⚡", cd: 16, dur: 6, color: "#fbbf24", info: "6 秒內全武器傷害 ×3。" },
   { key: "nova",   name: "新星", icon: "✺", cd: 13, dur: 0, color: "#f43f5e", info: "全場爆發傷害並擊退敵人。" },
   { key: "frost",  name: "冰霜", icon: "❄", cd: 15, dur: 5, color: "#67e8f9", info: "5 秒內敵人移速降為 35%。" },
   { key: "repair", name: "修復", icon: "✛", cd: 20, dur: 0, color: "#4ade80", info: "立即回復 40% 生命。" },

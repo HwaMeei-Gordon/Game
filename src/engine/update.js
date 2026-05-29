@@ -12,10 +12,10 @@ export function rangeOf(s) {
   return Math.min(WORLD.rangeMax, WORLD.rangeBase + s.rangeBonus * WORLD.rangeStep) + (s.rangeFlat || 0);
 }
 
+// weapons：目前已啟用、會同時開火的武器 key 陣列。
 // io：{ addDiamonds(n), reportWave(n) } — 把跨局的鑽石/最佳波次回報給外層。
-export function stepGame(g, s, dt, weaponKey, io) {
+export function stepGame(g, s, dt, weapons, io) {
   if (g.gameOver) return;
-  const wp = WEAPONS[weaponKey];
   const range = rangeOf(s);
   g.t += dt;
 
@@ -101,45 +101,45 @@ export function stepGame(g, s, dt, weaponKey, io) {
     }
   }
 
-  // 鎖定範圍內目標
+  // 鎖定範圍內目標（所有武器共用此清單）
   const inRange = g.enemies.map((e) => ({ e, dd: Math.hypot(e.x, e.y) })).filter((o) => o.dd <= range).sort((a, b) => a.dd - b.dd);
   const dm = g.buffs.over > 0 ? 3 : 1;
+  const crit1 = () => Math.random() < s.critChance;
 
-  if (wp.cont) {
-    if (weaponKey === "laser") {
-      g.beams = [];
-      for (const { e } of inRange.slice(0, s.multishot)) {
+  // 所有已啟用武器同時開火，各自使用自己的數值 s.weapons[wk]
+  for (const wk of weapons) {
+    const wp = WEAPONS[wk], ws = s.weapons[wk]; if (!wp || !ws) continue;
+    if (wk === "laser") {
+      for (const { e } of inRange.slice(0, ws.multishot)) {
         const crit = Math.random() < s.critChance * 0.3;
-        const perSec = s.damage * wp.dmgF * dm * (crit ? CRIT_MULT : 1);
-        damageEnemy(e, mitigateDot(perSec, e.def) * dt);
+        damageEnemy(e, mitigateDot(ws.damage * dm * (crit ? CRIT_MULT : 1), e.def) * dt);
         g.beams.push({ x1: 0, y1: 0, x2: e.x, y2: e.y, col: "#67e8f9", life: 0.05, wgt: 3 });
         if (e.hp <= 0) { const j = g.enemies.indexOf(e); if (j >= 0) killEnemy(g, s, e, j); }
       }
-    } else if (weaponKey === "flame") {
+    } else if (wk === "flame") {
       for (let j = g.enemies.length - 1; j >= 0; j--) {
         const e = g.enemies[j];
-        if (Math.hypot(e.x, e.y) <= WORLD.flameRange) {
-          const perSec = s.damage * wp.dmgF * dm;
-          damageEnemy(e, mitigateDot(perSec, e.def) * dt);
+        if (Math.hypot(e.x, e.y) <= ws.flameRange) {
+          damageEnemy(e, mitigateDot(ws.damage * dm, e.def) * dt);
           if (Math.random() < 0.15) burst(g, e.x, e.y, "#fb923c", 1);
           if (e.hp <= 0) killEnemy(g, s, e, j);
         }
       }
-    }
-  } else {
-    g.fireCd -= dt;
-    if (g.fireCd <= 0 && inRange.length) {
-      const bspd = s.bulletSpeed;
-      if (weaponKey === "chain") {
-        const first = inRange[0].e, crit = Math.random() < s.critChance, a = Math.atan2(first.y, first.x);
-        g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: s.damage * wp.dmgF * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: "chain", hits: [] });
-      } else {
-        for (const { e } of inRange.slice(0, s.multishot)) {
-          const a = Math.atan2(e.y, e.x), crit = Math.random() < s.critChance;
-          g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: s.damage * wp.dmgF * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: weaponKey, hits: [], pierce: s.pierce });
+    } else {
+      g.fireCd[wk] = (g.fireCd[wk] || 0) - dt;
+      if (g.fireCd[wk] <= 0 && inRange.length) {
+        const bspd = ws.bulletSpeed;
+        if (wk === "chain") {
+          const first = inRange[0].e, crit = crit1(), a = Math.atan2(first.y, first.x);
+          g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: "chain", hits: [], spd: bspd, bounces: ws.bounces });
+        } else {
+          for (const { e } of inRange.slice(0, ws.multishot)) {
+            const a = Math.atan2(e.y, e.x), crit = crit1();
+            g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: wk, hits: [], spd: bspd, pierce: ws.pierce, splash: ws.splash, splashR: ws.splashRadius });
+          }
         }
+        g.fireCd[wk] = 1 / ws.fireRate;
       }
-      g.fireCd = 1 / (s.fireRate * wp.rateF);
     }
   }
 
@@ -152,7 +152,7 @@ export function stepGame(g, s, dt, weaponKey, io) {
       if (best) {
         const ta = Math.atan2(best.y - b.y, best.x - b.x), ca = Math.atan2(b.vy, b.vx);
         let da = ta - ca; while (da > Math.PI) da -= 6.28; while (da < -Math.PI) da += 6.28;
-        const na = ca + Math.max(-4 * dt, Math.min(4 * dt, da)); b.vx = Math.cos(na) * s.bulletSpeed; b.vy = Math.sin(na) * s.bulletSpeed;
+        const na = ca + Math.max(-4 * dt, Math.min(4 * dt, da)); b.vx = Math.cos(na) * b.spd; b.vy = Math.sin(na) * b.spd;
       }
     }
     b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
@@ -164,15 +164,15 @@ export function stepGame(g, s, dt, weaponKey, io) {
         if (b.type === "chain") { chainHit(g, s, b, e); dead = true; break; }
         damageEnemy(e, mitigate(b.dmg, e.def)); b.hits.push(e.id);
         if (b.type === "homing") {
-          const sr = s.splashRadius;
+          const sr = b.splashR || WORLD.splashR, f = 0.5 + (b.splash || 0);
           ringFx(g, b.x, b.y, "#fbbf24", sr, 0.28);
-          for (const e2 of g.enemies) if (e2.id !== e.id && (e2.x - e.x) ** 2 + (e2.y - e.y) ** 2 < sr * sr) damageEnemy(e2, mitigate(b.dmg * 0.5, e2.def));
+          for (const e2 of g.enemies) if (e2.id !== e.id && (e2.x - e.x) ** 2 + (e2.y - e.y) ** 2 < sr * sr) damageEnemy(e2, mitigate(b.dmg * f, e2.def));
           burst(g, b.x, b.y, "#fbbf24", 5);
         }
-        if (s.splash > 0 && b.type === "cannon") {
-          const sr = s.splashRadius;
+        if (b.type === "cannon" && b.splash > 0) {
+          const sr = b.splashR || WORLD.splashR;
           ringFx(g, e.x, e.y, "#fde68a", sr, 0.26);
-          for (const e2 of g.enemies) if (e2.id !== e.id && (e2.x - e.x) ** 2 + (e2.y - e.y) ** 2 < sr * sr) damageEnemy(e2, mitigate(b.dmg * s.splash, e2.def));
+          for (const e2 of g.enemies) if (e2.id !== e.id && (e2.x - e.x) ** 2 + (e2.y - e.y) ** 2 < sr * sr) damageEnemy(e2, mitigate(b.dmg * b.splash, e2.def));
         }
         if (e.hp <= 0) { const k = g.enemies.indexOf(e); if (k >= 0) killEnemy(g, s, e, k); }
         else burst(g, b.x, b.y, b.crit ? "#fff" : "#fde68a", b.crit ? 4 : 2);

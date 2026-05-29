@@ -5,7 +5,7 @@ import { WORLD } from "../data/tuning.js";
 import { drawShape } from "./shapes.js";
 import { rangeOf } from "../engine/update.js";
 
-export function draw(ctx, g, s, d, camera, weaponKey) {
+export function draw(ctx, g, s, d, camera, weapons) {
   const { w, h, cx, cy, base } = d, z = camera.zoom, sc = base * z;
   const X = (wx) => cx + wx * sc, Y = (wy) => cy + wy * sc, L = (v) => v * sc;
   const range = rangeOf(s);
@@ -37,16 +37,17 @@ export function draw(ctx, g, s, d, camera, weaponKey) {
   ctx.strokeStyle = "rgba(244,63,94,0.14)"; ctx.setLineDash([4, 8]); ctx.lineWidth = 1.2;
   ctx.beginPath(); ctx.arc(cx, cy, L(WORLD.spawnR), 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
 
-  // 射程指示（火焰為實心暈圈，其餘為虛線圈）
-  if (weaponKey === "flame") {
-    const flr = L(WORLD.flameRange), fgr = ctx.createRadialGradient(cx, cy, L(WORLD.tower), cx, cy, flr);
+  // 射程指示：射程虛線圈；若火焰啟用，另外畫火焰範圍實心暈圈
+  const has = (k) => Array.isArray(weapons) && weapons.includes(k);
+  if (has("flame")) {
+    const flr = L((s.weapons.flame && s.weapons.flame.flameRange) || WORLD.flameRange);
+    const fgr = ctx.createRadialGradient(cx, cy, L(WORLD.tower), cx, cy, flr);
     fgr.addColorStop(0, "rgba(251,146,60,0.30)"); fgr.addColorStop(0.7, "rgba(249,115,22,0.12)"); fgr.addColorStop(1, "rgba(249,115,22,0)");
     ctx.fillStyle = fgr; ctx.beginPath(); ctx.arc(cx, cy, flr, 0, 6.2832); ctx.fill();
-  } else {
-    ctx.beginPath(); ctx.arc(cx, cy, L(range), 0, 6.2832);
-    ctx.strokeStyle = g.buffs?.frost > 0 ? "rgba(103,232,249,0.42)" : "rgba(34,211,238,0.18)";
-    ctx.setLineDash([5, 8]); ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
   }
+  ctx.beginPath(); ctx.arc(cx, cy, L(range), 0, 6.2832);
+  ctx.strokeStyle = g.buffs?.frost > 0 ? "rgba(103,232,249,0.42)" : "rgba(34,211,238,0.18)";
+  ctx.setLineDash([5, 8]); ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
 
   // AOE / 命中光環（擴張淡出，讓範圍傷害看得見）
   for (const fx of g.fx) {

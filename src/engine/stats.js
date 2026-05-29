@@ -4,7 +4,10 @@
 import { sumBonus } from "../data/skillTree.js";
 import { CFG, WORLD } from "../data/tuning.js";
 import { ENEMIES } from "../data/enemies.js";
+import { WEAPONS } from "../data/weapons.js";
 
+// 由「永久技能地圖節點」+「局內升級（全域 + 各武器）」換算出實際數值。
+// 回傳：全域(塔)數值，以及每把武器各自的戰鬥數值 out.weapons[wk]。
 export function derive(nodes, skill) {
   const G = (k) => sumBonus(nodes, k);
   const dmgM = 1 + G("dmgM");
@@ -13,26 +16,16 @@ export function derive(nodes, skill) {
   const goldM = 1 + G("goldM");
   const glass = (nodes.A_glass || 0) >= 1;
   const overload = (nodes.A_overload || 0) >= 1;
+  const gl = (skill && skill.global) || {};
 
-  let fireRate = (1.1 + skill.rate * 0.12) * rateM;
-  let damage = (13 + skill.dmg * 5) * dmgM;
-  // 過載核心：攻速越高，傷害加成越大。
-  if (overload) damage *= 1 + Math.max(0, fireRate - 1.5) * 0.15;
-
-  return {
-    damage, fireRate,
-    rangeBonus: skill.range,
+  const out = {
+    maxHp: (100 + (gl.hp || 0) * 30) * hpM,
+    regen: (gl.regen || 0) * 1.4 + G("regen") + CFG.baseRegen,
+    armor: glass ? 0 : (gl.armor || 0) * 1.5 + G("armor"),
+    rangeBonus: (gl.range || 0),
     rangeFlat: G("rangeFlat"),
-    maxHp: (100 + skill.hp * 30) * hpM,
-    regen: skill.regen * 1.4 + G("regen") + CFG.baseRegen,
-    armor: glass ? 0 : skill.armor * 1.5 + G("armor"),
-    multishot: 1 + G("multishot"),
-    pierce: 1 + skill.pierce + G("pierce"),
+    critChance: (gl.crit || 0) * 0.05 + G("critC"),
     thorns: G("thorns"),
-    splash: skill.splash * 0.12 + G("splash"),
-    bulletSpeed: WORLD.bulletSpd * (1 + skill.bspd * 0.3),
-    splashRadius: WORLD.splashR * (1 + skill.splashR * 0.25),
-    critChance: skill.crit * 0.05 + G("critC"),
     orbs: G("orbs"),
     gemYield: 1 + G("gem"),
     goldMult: goldM,
@@ -41,7 +34,29 @@ export function derive(nodes, skill) {
     glass,
     fortress: (nodes.D_fortress || 0) >= 1,
     immortal: (nodes.D_immortal || 0) >= 1,
+    weapons: {},
   };
+
+  for (const wk in WEAPONS) {
+    const wp = WEAPONS[wk];
+    const ws = (skill && skill.weapons && skill.weapons[wk]) || {};
+    let damage = (13 + (ws.dmg || 0) * 5) * dmgM * wp.dmgF;
+    const fireRate = wp.cont ? 0 : (1.1 + (ws.rate || 0) * 0.12) * rateM * wp.rateF;
+    if (overload && fireRate > 0) damage *= 1 + Math.max(0, fireRate - 1.5) * 0.15;
+    out.weapons[wk] = {
+      damage, fireRate,
+      multishot: 1 + (ws.multi || 0) + G("multishot"),
+      pierce: 1 + (ws.pierce || 0) + G("pierce"),
+      splash: (ws.splash || 0) * 0.12 + G("splash"),
+      bounces: 3 + (ws.bounce || 0),
+      flameRange: WORLD.flameRange * (1 + (ws.frange || 0) * 0.12),
+      bulletSpeed: WORLD.bulletSpd * (1 + (ws.bspd || 0) * 0.3),
+      splashRadius: WORLD.splashR,
+    };
+  }
+  // 軌道無人機/新星等以「標準彈傷害」作為代表傷害。
+  out.damage = out.weapons.cannon ? out.weapons.cannon.damage : 13 * dmgM;
+  return out;
 }
 
 // 暴擊倍率：固定 1.5×（爆擊就 ×1.5，否則 ×1）。

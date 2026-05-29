@@ -1,21 +1,19 @@
 // ── 畫面：遊戲畫面組裝 ───────────────────────────────────────
-// 純呈現：把 HUD、戰鬥畫布、武器/技能/升級各列組裝起來。
-// 遊戲迴圈與狀態由 App 持有，這裡只接收 ref 與 handler。
+// 純呈現：把 HUD、戰鬥畫布、主動技能與升級列組裝起來。
+// 多武器系統：所有已啟用武器同時開火，升級列只負責「加點對象」。
 import React from "react";
 import Hud from "./Hud.jsx";
-import WeaponBar from "./WeaponBar.jsx";
 import AbilityBar from "./AbilityBar.jsx";
-import SkillBar from "./SkillBar.jsx";
+import UpgradeBar from "./UpgradeBar.jsx";
 import { miniBtn, MONO } from "../styles.js";
 
 export default function GameScreen(props) {
   const {
     wrapRef, canvasRef, hud, diamonds, bestKills = 0, paused,
     onMenu, onPause, onOpenStats, onOpenDex, onOpenSettings, onRestart,
-    unlockedWeapons, weapon, setWeapon,
+    unlocked, upTab, setUpTab, skill, onBuyUpgrade,
     speed = 1, onCycleSpeed,
     cds, onUseAbility,
-    skillCat, setSkillCat, skillV, onBuySkill,
   } = props;
   const survival = hud.mode === "survival";
   const survivedToEnd = survival && hud.timeLeft <= 0;
@@ -52,10 +50,9 @@ export default function GameScreen(props) {
         )}
       </div>
 
-      <WeaponBar unlocked={unlockedWeapons} weapon={weapon} setWeapon={setWeapon} />
       <AbilityBar cds={cds} onUse={onUseAbility} />
-      <div style={{ textAlign: "center", fontSize: 9, color: "#475569", marginTop: -2 }}>長按技能 / 升級圖示可看說明</div>
-      <SkillBar skillCat={skillCat} setSkillCat={setSkillCat} skillV={skillV} gold={hud.gold} onBuy={onBuySkill} />
+      <div style={{ textAlign: "center", fontSize: 9, color: "#475569", margin: "0 0 2px" }}>長按技能 / 升級圖示可看說明</div>
+      <UpgradeBar unlocked={unlocked} upTab={upTab} setUpTab={setUpTab} skill={skill} gold={hud.gold} onBuy={onBuyUpgrade} />
     </>
   );
 }

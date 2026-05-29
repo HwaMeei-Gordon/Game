@@ -4,8 +4,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { DIFF } from "./data/difficulty.js";
 import { WORLD, DEFAULT_ZOOM, ZOOM_MIN, ZOOM_MAX } from "./data/tuning.js";
-import { DEFAULT_WEAPON } from "./data/weapons.js";
-import { ZERO_SKILL, findSkill, skillCost } from "./data/skills.js";
+import { createSkill, cloneSkill, ITEMS, globalItemCost, weaponItemCost } from "./data/skills.js";
 import { ZERO_NODES, nodeById, isBig, countBig, isNodeUnlocked, MAX_BIG, unlockedWeapons, spentDiamonds, resetFee } from "./data/skillTree.js";
 import { HEADSTART_OFFSET } from "./data/modes.js";
 import { derive } from "./engine/stats.js";
@@ -54,8 +53,8 @@ export default function App() {
   const game = useRef(null);
   const dims = useRef({ w: 360, h: 320, cx: 180, cy: 160, base: 90, dpr: 1 });
   const cam = useRef({ zoom: DEFAULT_ZOOM });
-  const statsRef = useRef(derive(ZERO_NODES, ZERO_SKILL));
-  const weaponRef = useRef(DEFAULT_WEAPON);
+  const statsRef = useRef(derive(ZERO_NODES, createSkill()));
+  const weaponsRef = useRef(["cannon"]); // 目前已啟用、同時開火的武器
   const lastDia = useRef(0);
   const wasOver = useRef(false);
 
@@ -66,19 +65,18 @@ export default function App() {
   useEffect(() => { try { localStorage.setItem(META_KEY, JSON.stringify({ diamonds: metaV.diamonds, nodes: metaV.nodes, bestWave: metaV.bestWave })); } catch {} }, [metaV]);
   useEffect(() => { try { localStorage.setItem(BESTKILLS_KEY, String(metaV.bestKills || 0)); } catch {} }, [metaV.bestKills]);
 
-  const skillRef = useRef({ ...ZERO_SKILL });
+  const skillRef = useRef(createSkill());
   const [skillV, setSkillV] = useState(skillRef.current);
 
   const [screen, setScreen] = useState("menu");
   const [overlay, setOverlay] = useState(null);
-  const [skillCat, setSkillCat] = useState("attack");
-  const [weapon, setWeapon] = useState(DEFAULT_WEAPON);
+  const [upTab, setUpTab] = useState("global"); // 升級加點的對象：global 或某武器
   const [hud, setHud] = useState({ gold: 0, wave: 1, hp: 100, maxHp: 100, gameOver: false, diff: "normal", mode: "classic", timeLeft: 0, kills: 0 });
   const [cds, setCds] = useState({ over: 0, nova: 0, frost: 0, repair: 0 });
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   useEffect(() => { pausedRef.current = paused || overlay != null; }, [paused, overlay]);
-  useEffect(() => { weaponRef.current = weapon; }, [weapon]);
+  useEffect(() => { weaponsRef.current = unlockedWeapons(metaV.nodes); }, [metaV.nodes]);
 
   // 倍速（1x / 2x / 4x）：以多次模擬子步驟達成，物理穩定。
   const [speed, setSpeed] = useState(1);
@@ -108,7 +106,7 @@ export default function App() {
   });
 
   const newRun = useCallback((diffKey, mode = "classic") => {
-    skillRef.current = { ...ZERO_SKILL }; recompute();
+    skillRef.current = createSkill(); recompute();
     const best = metaRef.current.bestWave;
     const opts = { mode };
     if (mode === "headstart") {
@@ -124,12 +122,22 @@ export default function App() {
     setSkillV({ ...skillRef.current });
   }, []);
 
-  const buySkill = useCallback((k) => {
-    const g = game.current; if (!g) return; const def = findSkill(k);
-    if (def.cap && skillRef.current[k] >= def.cap) return;
-    const c = skillCost(def, skillRef.current[k]); if (g.gold < c) return;
-    g.gold -= c; skillRef.current[k] += 1; recompute(); syncHp();
-    setSkillV({ ...skillRef.current }); audio.play("upgrade");
+  // 升級加點：target 為 "global" 或某武器 key。
+  const buyUpgrade = useCallback((target, key) => {
+    const g = game.current; if (!g) return; const def = ITEMS[key]; const sk = skillRef.current;
+    if (target === "global") {
+      const lvl = sk.global[key] || 0;
+      if (def.cap && lvl >= def.cap) return;
+      const c = globalItemCost(sk, key); if (g.gold < c) return;
+      g.gold -= c; sk.global[key] = lvl + 1;
+    } else {
+      const w = sk.weapons[target]; if (!w) return;
+      const lvl = w[key] || 0;
+      if (def.cap && lvl >= def.cap) return;
+      const c = weaponItemCost(sk, key); if (g.gold < c) return;
+      g.gold -= c; w[key] = lvl + 1;
+    }
+    recompute(); syncHp(); setSkillV(cloneSkill(sk)); audio.play("upgrade");
   }, []);
 
   const buyNode = useCallback((id) => {
@@ -155,9 +163,9 @@ export default function App() {
     if (triggerAbility(g, statsRef.current, k)) { setCds({ ...g.cds }); audio.play("ability"); }
   }, []);
 
-  const startGame = (dk, mode = "classic") => { newRun(dk, mode); setWeapon(DEFAULT_WEAPON); setOverlay(null); setPaused(false); setSpeed(1); setSkillCat("attack"); setScreen("playing"); };
+  const startGame = (dk, mode = "classic") => { newRun(dk, mode); setOverlay(null); setPaused(false); setSpeed(1); setUpTab("global"); setScreen("playing"); };
   const toMenu = () => { setScreen("menu"); setOverlay(null); };
-  const restart = () => { newRun(game.current.diffKey, game.current.mode); setWeapon(DEFAULT_WEAPON); setPaused(false); setSkillCat("attack"); };
+  const restart = () => { newRun(game.current.diffKey, game.current.mode); setPaused(false); setUpTab("global"); };
 
   // 量測畫布尺寸（含 DPR）
   useEffect(() => {
@@ -196,10 +204,10 @@ export default function App() {
     const loop = (now) => {
       let dt = (now - last) / 1000; last = now; if (dt > 0.05) dt = 0.05;
       const g = game.current, s = statsRef.current;
-      if (!pausedRef.current && !g.gameOver) { const steps = speedRef.current; for (let i = 0; i < steps; i++) stepGame(g, s, dt, weaponRef.current, io.current); }
+      if (!pausedRef.current && !g.gameOver) { const steps = speedRef.current; for (let i = 0; i < steps; i++) stepGame(g, s, dt, weaponsRef.current, io.current); }
       // 播放本幀累積的音效（限量避免一次太多）。
       if (g.sounds && g.sounds.length) { const n = Math.min(g.sounds.length, 4); for (let i = 0; i < n; i++) audio.play(g.sounds[i]); g.sounds.length = 0; }
-      draw(ctx, g, s, dims.current, cam.current, weaponRef.current);
+      draw(ctx, g, s, dims.current, cam.current, weaponsRef.current);
       acc += dt;
       if (acc > 0.08) {
         acc = 0;
@@ -216,8 +224,8 @@ export default function App() {
 
   const uw = unlockedWeapons(metaV.nodes);
   const inGame = screen === "playing";
-  const panelSkill = inGame ? skillV : ZERO_SKILL;
-  const panelDamage = inGame ? statsRef.current.damage : derive(metaV.nodes, ZERO_SKILL).damage;
+  const panelSkill = inGame ? skillV : createSkill();
+  const panelDamage = inGame ? statsRef.current.damage : derive(metaV.nodes, createSkill()).damage;
 
   return (
     <div style={{ height: "100dvh", width: "100%", maxWidth: 480, margin: "0 auto", background: "#04060a", color: "#e2e8f0", display: "flex", flexDirection: "column", fontFamily: FONT, overflow: "hidden", userSelect: "none", WebkitUserSelect: "none", position: "relative" }}>
@@ -229,10 +237,9 @@ export default function App() {
         <GameScreen
           wrapRef={wrapRef} canvasRef={canvasRef} hud={hud} diamonds={metaV.diamonds} bestKills={metaV.bestKills} paused={paused}
           onMenu={toMenu} onPause={() => setPaused((p) => !p)} onOpenStats={() => setOverlay("stats")} onOpenDex={() => setOverlay("dex")} onOpenSettings={() => setOverlay("settings")} onRestart={restart}
-          unlockedWeapons={uw} weapon={weapon} setWeapon={setWeapon}
+          unlocked={uw} upTab={upTab} setUpTab={setUpTab} skill={skillV} onBuyUpgrade={buyUpgrade}
           speed={speed} onCycleSpeed={cycleSpeed}
           cds={cds} onUseAbility={useAbility}
-          skillCat={skillCat} setSkillCat={setSkillCat} skillV={skillV} onBuySkill={buySkill}
         />
       )}
 
