@@ -48,17 +48,24 @@ export function cloneSkill(s) {
   return { global: { ...s.global }, weapons };
 }
 
-// 某武器項目在「所有武器」的累計等級（漲價依據）
-export function weaponItemTotal(skill, itemKey) {
-  let t = 0; for (const wk in skill.weapons) { const v = skill.weapons[wk]; if (v && v[itemKey]) t += v[itemKey]; } return t;
+// 「攻擊類」連動漲價：每買任一武器升級（不分武器、不分項目）一級，
+// 全部武器升級價格 ×1.01（攻擊類整體微幅上漲）。
+export const CLASS_MULT = 1.01;
+export function attackTotal(skill) {
+  let t = 0; for (const wk in skill.weapons) { const v = skill.weapons[wk]; for (const k in v) t += v[k] || 0; } return t;
 }
-// 武器項目花費：以跨武器總等級指數成長（在別把武器升級，這把也會變貴）
-export function weaponItemCost(skill, itemKey) {
-  const def = ITEMS[itemKey]; return Math.floor(def.base * Math.pow(def.mult, weaponItemTotal(skill, itemKey)));
+export function globalTotal(skill) {
+  let t = 0; for (const k in skill.global) t += skill.global[k] || 0; return t;
 }
-// 全域項目花費：以自身等級成長
+// 武器項目花費 = 該武器該項自身等級成長 × 攻擊類連動倍率
+export function weaponItemCost(skill, wk, itemKey) {
+  const def = ITEMS[itemKey], lvl = (skill.weapons[wk] && skill.weapons[wk][itemKey]) || 0;
+  return Math.floor(def.base * Math.pow(def.mult, lvl) * Math.pow(CLASS_MULT, attackTotal(skill)));
+}
+// 全域項目花費 = 自身等級成長 × 全域連動倍率
 export function globalItemCost(skill, itemKey) {
-  const def = ITEMS[itemKey]; return Math.floor(def.base * Math.pow(def.mult, skill.global[itemKey] || 0));
+  const def = ITEMS[itemKey];
+  return Math.floor(def.base * Math.pow(def.mult, skill.global[itemKey] || 0) * Math.pow(CLASS_MULT, globalTotal(skill)));
 }
 
 // 主動技能（CD 觸發）。

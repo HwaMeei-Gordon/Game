@@ -16,7 +16,6 @@ export function rangeOf(s) {
 // io：{ addDiamonds(n), reportWave(n) } — 把跨局的鑽石/最佳波次回報給外層。
 export function stepGame(g, s, dt, weapons, io) {
   if (g.gameOver) return;
-  const range = rangeOf(s);
   g.t += dt;
 
   for (const kk in g.cds) if (g.cds[kk] > 0) g.cds[kk] = Math.max(0, g.cds[kk] - dt);
@@ -101,14 +100,15 @@ export function stepGame(g, s, dt, weapons, io) {
     }
   }
 
-  // 鎖定範圍內目標（所有武器共用此清單）
-  const inRange = g.enemies.map((e) => ({ e, dd: Math.hypot(e.x, e.y) })).filter((o) => o.dd <= range).sort((a, b) => a.dd - b.dd);
+  // 依距離排序所有敵人；各武器再用自己的射程篩選（每把武器射程不同）
+  const byDist = g.enemies.map((e) => ({ e, dd: Math.hypot(e.x, e.y) })).sort((a, b) => a.dd - b.dd);
   const dm = g.buffs.over > 0 ? 3 : 1;
   const crit1 = () => Math.random() < s.critChance;
 
   // 所有已啟用武器同時開火，各自使用自己的數值 s.weapons[wk]
   for (const wk of weapons) {
     const wp = WEAPONS[wk], ws = s.weapons[wk]; if (!wp || !ws) continue;
+    const inRange = byDist.filter((o) => o.dd <= ws.range);
     if (wk === "laser") {
       for (const { e } of inRange.slice(0, ws.multishot)) {
         const crit = Math.random() < s.critChance * 0.3;

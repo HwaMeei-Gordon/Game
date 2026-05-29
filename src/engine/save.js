@@ -1,65 +1,52 @@
-// ── 紀錄：進度代碼（存檔編碼/解碼） ──────────────────────────
-// 沒有伺服器，進度以一段可複製的代碼保存（含校驗碼防竄改）。
-// 記錄：鑽石數、技能地圖各節點是否點亮、最佳波次。
-import { NODE_KEYS, ZERO_NODES } from "../data/skillTree.js";
+// ── 紀錄：進度代碼（可攜存檔編碼/解碼） ──────────────────────
+// 新格式：整份 meta 以 JSON → base64，前綴版本與簡易校驗碼，供換裝置/備份。
+// 另保留舊版 v3 字串解碼，供本機自動存檔一次性遷移（取鑽石/最佳波次）。
 
-const A36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const VERSION = "4"; // 節點數量改變時提高版本，避免讀到舊格式
+function b64encode(str) { return btoa(unescape(encodeURIComponent(str))); }
+function b64decode(str) { return decodeURIComponent(escape(atob(str))); }
 
-// v3（44 節點）的節點順序，用於從舊存檔遷移（保留鑽石/節點/最佳波次）。
-const OLD_KEYS_V3 = [
-  "core",
-  "a_dmg1", "a_rate1", "a_dmg2", "a_crit1", "a_pierce1", "a_dmg3", "W_homing", "A_multi", "A_overload", "W_laser", "a_pierce2", "a_curse", "a_berserk", "a_focus", "A_glass",
-  "d_hp1", "d_armor1", "d_hp2", "d_regen1", "d_thorn1", "d_hp3", "W_flame", "D_fortress", "D_thorn", "d_regen2", "d_curse", "d_bulwark", "d_guard", "D_immortal",
-  "m_gold1", "m_gem1", "m_gold2", "m_crit1", "m_splash1", "m_gold3", "W_chain", "M_orb", "M_lifesteal", "m_splash2", "m_curse", "m_jackpot", "m_fortune", "M_chaos",
-];
-
-function enc(n, w) { let s = ""; n = Math.max(0, Math.floor(n)); for (let i = 0; i < w; i++) { s = A36[n % 36] + s; n = Math.floor(n / 36); } return s; }
-function dec(s) { let n = 0; for (const c of s) { const i = A36.indexOf(c); if (i < 0) return null; n = n * 36 + i; } return n; }
-function packBits(bits) { let s = ""; for (let i = 0; i < bits.length; i += 5) { let v = 0; for (let j = 0; j < 5; j++) v |= (bits[i + j] || 0) << j; s += A36[v]; } return s; }
-function unpackBits(str, n) { const a = []; for (const c of str) { const v = A36.indexOf(c); if (v < 0) return null; for (let j = 0; j < 5; j++) a.push((v >> j) & 1); } return a.slice(0, n); }
-
-const NCHUNK = Math.ceil(NODE_KEYS.length / 5);
-
-export function encodeSave(diamonds, nodes, bestWave) {
-  let p = VERSION + enc(Math.min(diamonds, 36 ** 5 - 1), 5);
-  p += packBits(NODE_KEYS.map((k) => ((nodes[k] || 0) >= 1 ? 1 : 0)));
-  p += enc(Math.min(bestWave, 36 ** 2 - 1), 2);
-  let sum = 0; for (const c of p) sum += c.charCodeAt(0);
-  p += enc(sum % 1296, 2);
-  return p.match(/.{1,5}/g).join("-");
+export function encodeSave(meta) {
+  const j = JSON.stringify({
+    d: meta.diamonds | 0, bw: meta.bestWave | 0, bk: meta.bestKills | 0,
+    n: meta.nodes || {}, w: meta.weaponsOwned || {}, wb: meta.weaponBase || {},
+    ro: meta.relicsOwned || {}, re: meta.relicEquipped || null,
+  });
+  const b = b64encode(j);
+  let sum = 0; for (let i = 0; i < b.length; i++) sum += b.charCodeAt(i);
+  const chk = (sum % 1296).toString(36).padStart(2, "0");
+  return "T4-" + chk + "-" + b;
 }
 
 export function decodeSave(str) {
-  const s = (str || "").toUpperCase().replace(/[^0-9A-Z]/g, "");
-  const N = 1 + 5 + NCHUNK + 2 + 2;
-  if (s.length !== N || s[0] !== VERSION) return null;
-  const body = s.slice(0, N - 2), chk = s.slice(N - 2);
-  let sum = 0; for (const c of body) sum += c.charCodeAt(0);
-  if (enc(sum % 1296, 2) !== chk) return null;
-  const diamonds = dec(s.slice(1, 6));
-  const bits = unpackBits(s.slice(6, 6 + NCHUNK), NODE_KEYS.length);
-  if (!bits || diamonds === null) return null;
-  const nodes = { ...ZERO_NODES }; NODE_KEYS.forEach((k, i) => (nodes[k] = bits[i]));
-  const bestWave = dec(s.slice(6 + NCHUNK, 6 + NCHUNK + 2));
-  if (bestWave === null) return null;
-  return { diamonds, nodes, bestWave };
+  const s = (str || "").trim();
+  const m = /^T4-([0-9a-z]{2})-([A-Za-z0-9+/=]+)$/.exec(s);
+  if (!m) return null;
+  const b = m[2]; let sum = 0; for (let i = 0; i < b.length; i++) sum += b.charCodeAt(i);
+  if ((sum % 1296).toString(36).padStart(2, "0") !== m[1]) return null;
+  try {
+    const j = JSON.parse(b64decode(b));
+    return {
+      diamonds: j.d | 0, bestWave: j.bw || 1, bestKills: j.bk | 0,
+      nodes: j.n || {}, weaponsOwned: j.w || {}, weaponBase: j.wb || {},
+      relicsOwned: j.ro || {}, relicEquipped: j.re || null,
+    };
+  } catch { return null; }
 }
 
-// 從舊版 v3 字串（44 節點）解出進度，節點依 id 對應到目前的節點集合。
+// ── 舊版 v3（位元打包）解碼：僅用於遷移鑽石/最佳波次 ──
+const A36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+function enc(n, w) { let s = ""; n = Math.max(0, Math.floor(n)); for (let i = 0; i < w; i++) { s = A36[n % 36] + s; n = Math.floor(n / 36); } return s; }
+function dec(s) { let n = 0; for (const c of s) { const i = A36.indexOf(c); if (i < 0) return null; n = n * 36 + i; } return n; }
+const OLD_V3_NODES = 44, OLD_CHUNK = Math.ceil(OLD_V3_NODES / 5);
 export function legacyDecodeV3(str) {
   const s = (str || "").toUpperCase().replace(/[^0-9A-Z]/g, "");
-  const oldChunk = Math.ceil(OLD_KEYS_V3.length / 5);
-  const N = 1 + 5 + oldChunk + 2 + 2;
+  const N = 1 + 5 + OLD_CHUNK + 2 + 2;
   if (s.length !== N || s[0] !== "3") return null;
   const body = s.slice(0, N - 2), chk = s.slice(N - 2);
   let sum = 0; for (const c of body) sum += c.charCodeAt(0);
   if (enc(sum % 1296, 2) !== chk) return null;
   const diamonds = dec(s.slice(1, 6));
-  const bits = unpackBits(s.slice(6, 6 + oldChunk), OLD_KEYS_V3.length);
-  if (!bits || diamonds === null) return null;
-  const nodes = {}; OLD_KEYS_V3.forEach((k, i) => (nodes[k] = bits[i]));
-  const bestWave = dec(s.slice(6 + oldChunk, 6 + oldChunk + 2));
-  if (bestWave === null) return null;
-  return { diamonds, nodes, bestWave };
+  const bestWave = dec(s.slice(6 + OLD_CHUNK, 6 + OLD_CHUNK + 2));
+  if (diamonds === null || bestWave === null) return null;
+  return { diamonds, bestWave };
 }

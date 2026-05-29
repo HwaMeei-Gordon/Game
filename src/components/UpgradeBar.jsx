@@ -30,13 +30,13 @@ export default function UpgradeBar({ unlocked, upTab, setUpTab, skill, gold, onB
             const def = ITEMS[k];
             const lvl = isGlobal ? (skill.global[k] || 0) : ((skill.weapons[upTab] && skill.weapons[upTab][k]) || 0);
             const capped = def.cap && lvl >= def.cap;
-            const c = isGlobal ? globalItemCost(skill, k) : weaponItemCost(skill, k);
+            const c = isGlobal ? globalItemCost(skill, k) : weaponItemCost(skill, upTab, k);
             const ok = !capped && gold >= c;
             return <Cell key={k} def={def} lvl={lvl} capped={capped} c={c} ok={ok} col={col} coupled={!isGlobal} onClick={() => onBuy(upTab, k)} />;
           })}
         </div>
         <div style={{ fontSize: 9, color: "#475569", textAlign: "center", marginTop: 6 }}>
-          {isGlobal ? "全域升級對塔與所有武器生效" : "已啟用武器同時開火 · 同一項在別把武器升級會一起變貴 · 長按看說明"}
+          {isGlobal ? "全域升級對塔與所有武器生效" : "已啟用武器同時開火 · 每買一級攻擊類升級，全攻擊類價格 +1% · 長按看說明"}
         </div>
       </div>
     </>
@@ -56,7 +56,7 @@ function Cell({ def, lvl, capped, c, ok, col, coupled, onClick }) {
           <div style={{ fontWeight: 700, color: col, marginBottom: 3 }}>{def.name}</div>
           <div style={{ color: "#94a3b8" }}>目前：{lvl > 0 ? def.fmt(lvl) : "未升級"}</div>
           <div style={{ color: "#cbd5e1" }}>下一級：{capped ? "已滿級" : def.fmt(lvl + 1)}</div>
-          {coupled && <div style={{ color: "#fca5a5", marginTop: 3 }}>價格依所有武器此項總等級上漲</div>}
+          {coupled && <div style={{ color: "#fca5a5", marginTop: 3 }}>每買一級攻擊類，全攻擊類價格 +1%</div>}
         </div>
       )}
       <button onPointerDown={down} onPointerUp={up} onPointerLeave={leave}

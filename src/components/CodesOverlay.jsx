@@ -3,12 +3,11 @@ import React, { useState } from "react";
 import Overlay from "./Overlay.jsx";
 import { miniBtn, MONO } from "../styles.js";
 import { encodeSave, decodeSave } from "../engine/save.js";
-import { ZERO_NODES } from "../data/skillTree.js";
 
 export default function CodesOverlay({ metaRef, commitMeta, metaV, onClose }) {
   const [input, setInput] = useState("");
   const [msg, setMsg] = useState(null);
-  const current = encodeSave(metaV.diamonds, metaV.nodes, metaV.bestWave);
+  const current = encodeSave(metaV);
 
   const copy = async () => {
     try { await navigator.clipboard.writeText(current); setMsg({ t: "ok", m: "已複製到剪貼簿" }); }
@@ -17,7 +16,10 @@ export default function CodesOverlay({ metaRef, commitMeta, metaV, onClose }) {
   const load = () => {
     const r = decodeSave(input);
     if (!r) { setMsg({ t: "err", m: "代碼無效（格式或校驗失敗）" }); return; }
-    metaRef.current.diamonds = r.diamonds; metaRef.current.nodes = { ...ZERO_NODES, ...r.nodes }; metaRef.current.bestWave = r.bestWave;
+    const m = metaRef.current;
+    m.diamonds = r.diamonds; m.bestWave = r.bestWave; m.bestKills = r.bestKills || m.bestKills || 0;
+    m.nodes = r.nodes || {}; m.weaponsOwned = r.weaponsOwned || {}; m.weaponBase = r.weaponBase || {};
+    m.relicsOwned = r.relicsOwned || {}; m.relicEquipped = r.relicEquipped || null;
     commitMeta(); setMsg({ t: "ok", m: `讀取成功 · 💎${r.diamonds} · 最佳第${r.bestWave}波` });
   };
 

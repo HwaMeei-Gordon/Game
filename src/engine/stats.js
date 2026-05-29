@@ -1,66 +1,73 @@
 // ── 機制：數值衍生 ───────────────────────────────────────────
-// 把「永久技能地圖節點」+「局內技能等級」換算成實際戰鬥數值。
-// 這是數值面板與戰鬥共用的單一真相來源。
-import { sumBonus } from "../data/skillTree.js";
+// 由「永久進度 meta」(基礎屬性樹 + 武器箱基礎 + 各武器樹 + 裝備道具)
+// 與「局內升級 skill」(全域 + 各武器) 換算出實際數值。
+// 回傳：全域(塔)數值，以及每把武器各自的戰鬥數值 out.weapons[wk]。
 import { CFG, WORLD } from "../data/tuning.js";
 import { ENEMIES } from "../data/enemies.js";
 import { WEAPONS } from "../data/weapons.js";
+import { BASE_TREE, WEAPON_TREE, treeBonus } from "../data/skillTree.js";
+import { RELICS } from "../data/relics.js";
 
-// 由「永久技能地圖節點」+「局內升級（全域 + 各武器）」換算出實際數值。
-// 回傳：全域(塔)數值，以及每把武器各自的戰鬥數值 out.weapons[wk]。
-export function derive(nodes, skill) {
-  const G = (k) => sumBonus(nodes, k);
-  const dmgM = 1 + G("dmgM");
-  const rateM = Math.max(0.3, 1 + G("rateM"));
-  const hpM = Math.max(0.3, 1 + G("hpM"));
-  const goldM = 1 + G("goldM");
-  const glass = (nodes.A_glass || 0) >= 1;
-  const overload = (nodes.A_overload || 0) >= 1;
+export const CRIT_MULT = 1.5;
+
+export function derive(meta, skill) {
+  const N = (meta && meta.nodes) || {};
+  const relic = meta && meta.relicEquipped ? RELICS[meta.relicEquipped] : null;
+  // 全域加成 = 基礎屬性樹 + 裝備道具
+  const Bg = (k) => treeBonus(BASE_TREE, N, k) + (relic && relic.bonus && relic.bonus[k] ? relic.bonus[k] : 0);
+  const dmgM = 1 + Bg("dmgM");
+  const hpM = Math.max(0.3, 1 + Bg("hpM"));
   const gl = (skill && skill.global) || {};
 
   const out = {
     maxHp: (100 + (gl.hp || 0) * 30) * hpM,
-    regen: (gl.regen || 0) * 1.4 + G("regen") + CFG.baseRegen,
-    armor: glass ? 0 : (gl.armor || 0) * 1.5 + G("armor"),
+    regen: (gl.regen || 0) * 1.4 + Bg("regen") + CFG.baseRegen,
+    armor: (gl.armor || 0) * 1.5 + Bg("armor"),
     rangeBonus: (gl.range || 0),
-    rangeFlat: G("rangeFlat"),
-    critChance: (gl.crit || 0) * 0.05 + G("critC"),
-    thorns: G("thorns"),
-    orbs: G("orbs"),
-    gemYield: 1 + G("gem"),
-    goldMult: goldM,
-    lifesteal: G("lifesteal"),
-    takeDmgMult: 1 + G("takeDmg"),
-    glass,
-    fortress: (nodes.D_fortress || 0) >= 1,
-    immortal: (nodes.D_immortal || 0) >= 1,
+    rangeFlat: Bg("rangeFlat"),
+    critChance: (gl.crit || 0) * 0.05 + Bg("critC"),
+    thorns: Bg("thorns"),
+    orbs: Bg("orbs"),
+    gemYield: 1 + Bg("gem"),
+    goldMult: 1 + Bg("goldM"),
+    lifesteal: Bg("lifesteal"),
+    takeDmgMult: 1 + Bg("takeDmg"),
+    glass: false,
+    fortress: false,
+    immortal: relic && relic.flag === "immortal",
     weapons: {},
   };
 
+  // 全域基礎射程（各武器再乘自己的 rangeF）
+  const baseRange = Math.min(WORLD.rangeMax, WORLD.rangeBase + out.rangeBonus * WORLD.rangeStep) + out.rangeFlat;
+
   for (const wk in WEAPONS) {
     const wp = WEAPONS[wk];
+    const wt = WEAPON_TREE[wk] || [];
+    const Wt = (k) => treeBonus(wt, N, k);
+    const ab = (meta && meta.weaponBase && meta.weaponBase[wk]) || {};
     const ws = (skill && skill.weapons && skill.weapons[wk]) || {};
-    let damage = (13 + (ws.dmg || 0) * 5) * dmgM * wp.dmgF;
-    const fireRate = wp.cont ? 0 : (1.1 + (ws.rate || 0) * 0.12) * rateM * wp.rateF;
-    if (overload && fireRate > 0) damage *= 1 + Math.max(0, fireRate - 1.5) * 0.15;
+    const wDmgM = dmgM * (1 + Wt("dmgM"));
+    let damage = (13 + (ab.dmg || 0) * 5 + (ws.dmg || 0) * 5) * wDmgM * wp.dmgF;
+    const rateM = 1 + Wt("rateM");
+    const fireRate = wp.cont ? 0 : (1.1 + (ab.rate || 0) * 0.08 + (ws.rate || 0) * 0.12) * rateM * wp.rateF;
+    const flameRange = WORLD.flameRange * (1 + (ws.frange || 0) * 0.12 + Wt("frange"));
     out.weapons[wk] = {
       damage, fireRate,
-      multishot: 1 + (ws.multi || 0) + G("multishot"),
-      pierce: 1 + (ws.pierce || 0) + G("pierce"),
-      splash: (ws.splash || 0) * 0.12 + G("splash"),
-      bounces: 3 + (ws.bounce || 0),
-      flameRange: WORLD.flameRange * (1 + (ws.frange || 0) * 0.12),
-      bulletSpeed: WORLD.bulletSpd * (1 + (ws.bspd || 0) * 0.3),
+      range: wk === "flame" ? flameRange : baseRange * wp.rangeF, // 各武器射程不同
+      multishot: 1 + (ws.multi || 0) + Wt("multishot"),
+      pierce: 1 + (ws.pierce || 0) + Wt("pierce"),
+      splash: (ws.splash || 0) * 0.12 + Wt("splash"),
+      bounces: 3 + (ws.bounce || 0) + Wt("bounce"),
+      flameRange,
+      bulletSpeed: WORLD.bulletSpd * wp.spd * (1 + (ws.bspd || 0) * 0.3),
       splashRadius: WORLD.splashR,
     };
   }
-  // 軌道無人機/新星等以「標準彈傷害」作為代表傷害。
+  out.range = baseRange; // 代表射程（畫面外圈參考）
   out.damage = out.weapons.cannon ? out.weapons.cannon.damage : 13 * dmgM;
   return out;
 }
-
-// 暴擊倍率：固定 1.5×（爆擊就 ×1.5，否則 ×1）。
-export const CRIT_MULT = 1.5;
 
 // 某波次、某難度下，指定敵人的實際屬性（給敵人數值面板用）。
 export function enemyStatsAt(type, wave, diff) {

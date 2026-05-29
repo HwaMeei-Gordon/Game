@@ -4,9 +4,11 @@ import { StatRow } from "./widgets.jsx";
 import { MONO } from "../styles.js";
 import { derive } from "../engine/stats.js";
 import { rangeOf } from "../engine/update.js";
-import { ZERO_NODES, unlockedWeapons } from "../data/skillTree.js";
+import { unlockedWeapons } from "../data/skillTree.js";
 import { createSkill } from "../data/skills.js";
 import { WEAPONS } from "../data/weapons.js";
+
+const EMPTY_META = { diamonds: 0, nodes: {}, weaponsOwned: {}, weaponBase: {}, relicsOwned: {}, relicEquipped: null };
 
 const r0 = (x) => Math.round(x);
 const r1 = (x) => x.toFixed(1);
@@ -19,11 +21,11 @@ function weaponDps(wk, w) {
   return w.damage * w.fireRate * w.multishot;
 }
 
-export default function StatsPanel({ nodes, skill }) {
+export default function StatsPanel({ meta, skill }) {
   const sk = skill || createSkill();
-  const base = derive(ZERO_NODES, createSkill());
-  const now = derive(nodes, sk);
-  const unlocked = unlockedWeapons(nodes);
+  const base = derive(EMPTY_META, createSkill());
+  const now = derive(meta, sk);
+  const unlocked = unlockedWeapons(meta);
 
   const globalRows = [
     ["生命", r0(base.maxHp), r0(now.maxHp)],
