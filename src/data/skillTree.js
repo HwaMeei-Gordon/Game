@@ -22,41 +22,49 @@ export const BASE_TREE = [
   { id: "b_range", x: 200,  y: 330, parent: "b_armor2",name: "視野",  icon: "range",  cost: 120, bonus: { rangeFlat: 0.30 } },
 ];
 
-// 各武器專屬樹（只強化該武器；special 為該武器的進階強節點）
+// 各武器專屬樹（順著該武器「攻擊方式」的發展路線；special 為招牌節點）
 export const WEAPON_TREE = {
+  // 標準彈：直線投射 → 多重齊射 + 穿透成排清線
   cannon: [
     { id: "c_dmg1",   x: 0,   y: 0,   parent: null,     name: "膛線",   icon: "dmg",    cost: 60,  bonus: { dmgM: 0.10 } },
     { id: "c_multi1", x: -90, y: 110, parent: "c_dmg1", name: "散射",   icon: "multi",  cost: 120, bonus: { multishot: 1 } },
     { id: "c_splash1",x: 90,  y: 110, parent: "c_dmg1", name: "爆裂彈", icon: "splash", cost: 100, bonus: { splash: 0.18 } },
     { id: "c_dmg2",   x: 0,   y: 220, parent: "c_dmg1", name: "重砲",   icon: "dmg",    cost: 140, bonus: { dmgM: 0.15 } },
     { id: "c_pierce1",x: -90, y: 220, parent: "c_multi1",name: "穿甲彈",icon: "pierce", cost: 120, bonus: { pierce: 1 } },
-    { id: "c_multi2", x: -90, y: 330, parent: "c_pierce1",name: "彈幕", icon: "multi", cost: 240, bonus: { multishot: 2 }, special: 1, info: "標準彈專屬：齊射 +2 發。" },
+    { id: "c_multi2", x: -90, y: 330, parent: "c_pierce1",name: "彈幕", icon: "multi", cost: 240, bonus: { multishot: 2 }, special: 1, info: "標準彈招牌：齊射 +2 發，配穿透成排清線。" },
   ],
+  // 追蹤彈：自動追蹤爆破 → 多發齊飛 + 貫穿續追
   homing: [
     { id: "h_dmg1",   x: 0,   y: 0,   parent: null,     name: "彈頭",   icon: "dmg",    cost: 60,  bonus: { dmgM: 0.10 } },
     { id: "h_multi1", x: -90, y: 110, parent: "h_dmg1", name: "齊發",   icon: "multi",  cost: 120, bonus: { multishot: 1 } },
     { id: "h_splash1",x: 90,  y: 110, parent: "h_dmg1", name: "爆破",   icon: "splash", cost: 120, bonus: { splash: 0.25 } },
-    { id: "h_rate1",  x: 0,   y: 220, parent: "h_dmg1", name: "裝填",   icon: "rate",   cost: 120, bonus: { rateM: 0.12 } },
-    { id: "h_dmg2",   x: -90, y: 220, parent: "h_multi1",name: "追命",  icon: "dmg",    cost: 200, bonus: { dmgM: 0.18, splash: 0.15 }, special: 1, info: "追蹤彈專屬：傷害與爆破再強化。" },
+    { id: "h_pierce1",x: 90,  y: 220, parent: "h_splash1",name: "貫穿彈頭",icon: "pierce",cost: 150, bonus: { pierce: 1 } },
+    { id: "h_dmg2",   x: -90, y: 220, parent: "h_multi1",name: "追命",  icon: "dmg",    cost: 200, bonus: { dmgM: 0.18, splash: 0.15 }, special: 1, info: "追蹤彈招牌：傷害與爆破再強化。" },
   ],
+  // 雷射：持續鎖定光束 → 多束 + 聚焦增傷（計算頻率/傷害增幅）
   laser: [
     { id: "l_dmg1",   x: 0,   y: 0,   parent: null,     name: "聚能",   icon: "dmg",    cost: 60,  bonus: { dmgM: 0.10 } },
     { id: "l_beam1",  x: -80, y: 110, parent: "l_dmg1", name: "分光",   icon: "multi",  cost: 150, bonus: { multishot: 1 } },
     { id: "l_dmg2",   x: 80,  y: 110, parent: "l_dmg1", name: "高頻",   icon: "dmg",    cost: 120, bonus: { dmgM: 0.15 } },
-    { id: "l_dmg3",   x: 0,   y: 220, parent: "l_dmg2", name: "過載光束",icon: "laser", cost: 220, bonus: { dmgM: 0.25 }, special: 1, info: "雷射專屬：單體 DPS 暴增。" },
+    { id: "l_tick1",  x: -80, y: 220, parent: "l_beam1",name: "脈衝",   icon: "rate",   cost: 140, bonus: { ltick: 1 } },
+    { id: "l_amp1",   x: 80,  y: 220, parent: "l_dmg2", name: "灼蝕",   icon: "crit",   cost: 160, bonus: { lamp: 2 } },
+    { id: "l_dmg3",   x: 0,   y: 330, parent: "l_dmg2", name: "過載光束",icon: "laser", cost: 240, bonus: { dmgM: 0.25, lamp: 2 }, special: 1, info: "雷射招牌：持續燒同一目標，傷害滾雪球。" },
   ],
+  // 折射：在敵群間彈射 → 增加跳數 + 擊殺分裂滾雪球
   chain: [
     { id: "ch_dmg1",  x: 0,   y: 0,   parent: null,     name: "導電",   icon: "dmg",    cost: 60,  bonus: { dmgM: 0.10 } },
     { id: "ch_bounce1",x: -80,y: 110, parent: "ch_dmg1",name: "增幅",   icon: "chain",  cost: 120, bonus: { bounce: 1 } },
     { id: "ch_rate1", x: 80,  y: 110, parent: "ch_dmg1",name: "充能",   icon: "rate",   cost: 120, bonus: { rateM: 0.12 } },
-    { id: "ch_dmg2",  x: 0,   y: 220, parent: "ch_dmg1",name: "高壓",   icon: "dmg",    cost: 140, bonus: { dmgM: 0.15 } },
-    { id: "ch_bounce2",x: -80,y: 220, parent: "ch_bounce1",name: "連鎖風暴",icon: "chain",cost: 220, bonus: { bounce: 2 }, special: 1, info: "折射專屬：彈射 +2 次。" },
+    { id: "ch_split1",x: -80, y: 220, parent: "ch_bounce1",name: "裂變",icon: "splash", cost: 160, bonus: { split: 1 } },
+    { id: "ch_bounce2",x: 0,  y: 330, parent: "ch_bounce1",name: "連鎖風暴",icon: "chain",cost: 240, bonus: { bounce: 2, split: 1 }, special: 1, info: "折射招牌：彈射 +2、擊殺額外分裂。" },
   ],
+  // 火焰：近身範圍灼燒 → 擴大火域 + 減速控場
   flame: [
     { id: "f_dmg1",   x: 0,   y: 0,   parent: null,     name: "高溫",   icon: "dmg",    cost: 60,  bonus: { dmgM: 0.12 } },
     { id: "f_range1", x: -80, y: 110, parent: "f_dmg1", name: "擴焰",   icon: "flame",  cost: 100, bonus: { frange: 0.15 } },
     { id: "f_dmg2",   x: 80,  y: 110, parent: "f_dmg1", name: "白熱",   icon: "dmg",    cost: 140, bonus: { dmgM: 0.18 } },
-    { id: "f_range2", x: 0,   y: 220, parent: "f_range1",name: "烈焰風暴",icon: "flame",cost: 220, bonus: { frange: 0.30 }, special: 1, info: "火焰專屬：火域大幅擴張。" },
+    { id: "f_slow1",  x: 80,  y: 220, parent: "f_dmg2", name: "凝滯",   icon: "orb",    cost: 150, bonus: { slow: 2 } },
+    { id: "f_range2", x: -80, y: 220, parent: "f_range1",name: "烈焰風暴",icon: "flame",cost: 240, bonus: { frange: 0.30, slow: 1 }, special: 1, info: "火焰招牌：火域大幅擴張並強化減速控場。" },
   ],
 };
 
