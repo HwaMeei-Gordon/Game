@@ -11,7 +11,7 @@ import { miniBtn, MONO } from "../styles.js";
 export default function GameScreen(props) {
   const {
     wrapRef, canvasRef, hud, diamonds, bestKills = 0, paused,
-    onMenu, onPause, onOpenStats, onOpenDex, onRestart,
+    onMenu, onPause, onOpenStats, onOpenDex, onOpenSettings, onRestart,
     unlockedWeapons, weapon, setWeapon,
     cds, onUseAbility,
     skillCat, setSkillCat, skillV, onBuySkill,
@@ -27,8 +27,12 @@ export default function GameScreen(props) {
         <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
         <div style={{ position: "absolute", top: 6, right: 8, fontSize: 9, color: "#475569" }}>雙指縮放</div>
         {paused && !hud.gameOver && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(4,6,10,0.5)" }}>
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", gap: 14, alignItems: "center", justifyContent: "center", background: "rgba(4,6,10,0.55)" }}>
             <span style={{ fontFamily: MONO, fontSize: 22, color: "#67e8f9", letterSpacing: 2 }}>⏸ 已暫停</span>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={onPause} style={{ ...miniBtn, fontSize: 14, padding: "9px 18px", background: "#0e7490", color: "#ecfeff", border: "1px solid #22d3ee" }}>▶ 繼續</button>
+              <button onClick={onOpenSettings} style={{ ...miniBtn, fontSize: 14, padding: "9px 18px" }}>⚙ 設定</button>
+            </div>
           </div>
         )}
         {hud.gameOver && (

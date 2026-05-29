@@ -90,6 +90,15 @@ export function childrenOf(id) {
   return NODES.filter((n) => (n.reqAll ? n.reqAll.includes(id) : n.parent === id));
 }
 
+// 已花在技能地圖上的鑽石總額（核心免費，不計）。
+export function spentDiamonds(nodes) {
+  let v = 0;
+  for (const n of NODES) if (n.cost > 0 && (nodes[n.id] || 0) >= 1) v += n.cost;
+  return v;
+}
+// 重置技能地圖的手續費（你「付」的鑽石）：花費的 15%，至少 20。
+export function resetFee(spent) { return spent <= 0 ? 0 : Math.max(20, Math.floor(spent * 0.15)); }
+
 // 把節點 bonus 轉成可讀文字（給說明面板用）。
 export function nodeDesc(nd) {
   const b = nd.bonus || {}, parts = [];

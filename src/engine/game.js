@@ -19,7 +19,7 @@ export function createRun(diffKey, stats, opts = {}) {
     buffs: { over: 0, frost: 0 },
     cds: { over: 0, nova: 0, frost: 0, repair: 0 },
     gameOver: false, t: 0,
-    kills: 0,
+    kills: 0, sounds: [],
     survivalTime: mode === "survival" ? SURVIVAL_SECONDS : 0,
     survivalStrength: Math.max(1, opts.survivalStrength || 1),
     bossTimer: 12,
@@ -73,6 +73,7 @@ export function spawnMini(g, x, y, n) {
 
 export function killEnemy(g, s, e, idx) {
   g.kills = (g.kills || 0) + 1;
+  if (g.sounds) g.sounds.push(e.type === "boss" ? "bosskill" : "kill");
   g.gold += Math.floor(e.rw * g.diff.gold * s.goldMult);
   if (s.lifesteal > 0) g.hp = Math.min(g.maxHp, g.hp + g.maxHp * 0.004);
   burst(g, e.x, e.y, e.col, e.type === "boss" ? 22 : 9);

@@ -15,7 +15,8 @@ export function drawShape(ctx, shape, x, y, r, rot) {
     for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * 0.45 : r, an = i * Math.PI / 5 - Math.PI / 2, px = Math.cos(an) * rr, py = Math.sin(an) * rr; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
     ctx.closePath(); ctx.restore();
   } else {
-    const sides = shape === "triangle" ? 3 : shape === "hexagon" ? 6 : 4;
+    const SIDES = { triangle: 3, pentagon: 5, hexagon: 6, heptagon: 7, octagon: 8 };
+    const sides = SIDES[shape] || 4;
     ctx.save(); ctx.translate(x, y); ctx.rotate(rot + (shape === "square" ? Math.PI / 4 : 0));
     for (let i = 0; i < sides; i++) { const an = i * 6.2832 / sides - Math.PI / 2, px = Math.cos(an) * r, py = Math.sin(an) * r; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
     ctx.closePath(); ctx.restore();

@@ -6,13 +6,14 @@ import { DIFF } from "./data/difficulty.js";
 import { WORLD, DEFAULT_ZOOM, ZOOM_MIN, ZOOM_MAX } from "./data/tuning.js";
 import { DEFAULT_WEAPON } from "./data/weapons.js";
 import { ZERO_SKILL, findSkill, skillCost } from "./data/skills.js";
-import { ZERO_NODES, nodeById, isBig, countBig, isNodeUnlocked, MAX_BIG, unlockedWeapons } from "./data/skillTree.js";
+import { ZERO_NODES, nodeById, isBig, countBig, isNodeUnlocked, MAX_BIG, unlockedWeapons, spentDiamonds, resetFee } from "./data/skillTree.js";
 import { HEADSTART_OFFSET } from "./data/modes.js";
 import { derive } from "./engine/stats.js";
 import { encodeSave, decodeSave } from "./engine/save.js";
 import { createRun, cumulativeWaveGold } from "./engine/game.js";
 import { stepGame, triggerAbility } from "./engine/update.js";
 import { draw } from "./render/draw.js";
+import * as audio from "./engine/audio.js";
 import { FONT } from "./styles.js";
 
 import Menu from "./components/Menu.jsx";
@@ -23,6 +24,7 @@ import SkillMap from "./components/SkillMap.jsx";
 import StatsPanel from "./components/StatsPanel.jsx";
 import EnemyPanel from "./components/EnemyPanel.jsx";
 import CodesOverlay from "./components/CodesOverlay.jsx";
+import Settings from "./components/Settings.jsx";
 
 // 自動存檔：把進度寫進這支手機/瀏覽器的 localStorage（同裝置關掉重開都還在）。
 // 進度代碼則用於換裝置/備份。鍵名含版本，存檔格式改變時不會誤讀舊資料。
@@ -71,6 +73,18 @@ export default function App() {
   useEffect(() => { pausedRef.current = paused || overlay != null; }, [paused, overlay]);
   useEffect(() => { weaponRef.current = weapon; }, [weapon]);
 
+  // 音訊：分開的音樂/音效開關（持久化於 audio 模組）。
+  const [sfxOn, setSfxOn] = useState(audio.getSfx());
+  const [bgmOn, setBgmOn] = useState(audio.getBgm());
+  const toggleSfx = () => { const v = !sfxOn; setSfxOn(v); audio.setSfx(v); };
+  const toggleBgm = () => { const v = !bgmOn; setBgmOn(v); audio.setBgm(v); };
+  // 行動裝置需在首次手勢後才能發聲：第一次點擊就解鎖音訊並（若開啟）播放音樂。
+  useEffect(() => {
+    const unlock = () => { audio.resume(); window.removeEventListener("pointerdown", unlock); };
+    window.addEventListener("pointerdown", unlock);
+    return () => window.removeEventListener("pointerdown", unlock);
+  }, []);
+
   const recompute = () => { statsRef.current = derive(metaRef.current.nodes, skillRef.current); };
   function syncHp() { const g = game.current; if (!g) return; const nm = statsRef.current.maxHp, d = nm - g.maxHp; g.maxHp = nm; g.hp = Math.min(nm, g.hp + Math.max(0, d)); }
 
@@ -99,29 +113,33 @@ export default function App() {
 
   const buySkill = useCallback((k) => {
     const g = game.current; if (!g) return; const def = findSkill(k);
-    setSkillV(() => {
-      if (def.cap && skillRef.current[k] >= def.cap) return { ...skillRef.current };
-      const c = skillCost(def, skillRef.current[k]); if (g.gold < c) return { ...skillRef.current };
-      g.gold -= c; skillRef.current[k] += 1; recompute(); syncHp(); return { ...skillRef.current };
-    });
+    if (def.cap && skillRef.current[k] >= def.cap) return;
+    const c = skillCost(def, skillRef.current[k]); if (g.gold < c) return;
+    g.gold -= c; skillRef.current[k] += 1; recompute(); syncHp();
+    setSkillV({ ...skillRef.current }); audio.play("upgrade");
   }, []);
 
   const buyNode = useCallback((id) => {
-    const def = nodeById[id];
-    setMetaV(() => {
-      const nd = metaRef.current.nodes, owned = (nd[id] || 0) >= 1;
-      if (owned) { if (isBig(def)) { nd[id] = 0; metaRef.current.diamonds += def.cost; } return snap(); }
-      if (!isNodeUnlocked(def, nd)) return snap();
-      if (isBig(def) && countBig(nd) >= MAX_BIG) return snap();
-      if (metaRef.current.diamonds < def.cost) return snap();
-      metaRef.current.diamonds -= def.cost; nd[id] = 1; return snap();
-    });
-    function snap() { return { diamonds: metaRef.current.diamonds, nodes: { ...metaRef.current.nodes }, bestWave: metaRef.current.bestWave, bestKills: metaRef.current.bestKills || 0 }; }
-  }, []);
+    const def = nodeById[id], nd = metaRef.current.nodes, owned = (nd[id] || 0) >= 1;
+    if (owned) { if (isBig(def)) { nd[id] = 0; metaRef.current.diamonds += def.cost; audio.play("buy"); commitMeta(); } return; }
+    if (!isNodeUnlocked(def, nd)) return;
+    if (isBig(def) && countBig(nd) >= MAX_BIG) return;
+    if (metaRef.current.diamonds < def.cost) return;
+    metaRef.current.diamonds -= def.cost; nd[id] = 1; audio.play("buy"); commitMeta();
+  }, [commitMeta]);
+
+  // 重置技能地圖：退還已花費鑽石，扣除手續費，清空所有節點（含詛咒）。
+  const resetTree = useCallback(() => {
+    const spent = spentDiamonds(metaRef.current.nodes);
+    if (spent <= 0) return;
+    metaRef.current.diamonds += spent - resetFee(spent);
+    metaRef.current.nodes = { ...ZERO_NODES };
+    audio.play("buy"); commitMeta();
+  }, [commitMeta]);
 
   const useAbility = useCallback((k) => {
     const g = game.current; if (!g || pausedRef.current) return;
-    if (triggerAbility(g, statsRef.current, k)) setCds({ ...g.cds });
+    if (triggerAbility(g, statsRef.current, k)) { setCds({ ...g.cds }); audio.play("ability"); }
   }, []);
 
   const startGame = (dk, mode = "classic") => { newRun(dk, mode); setWeapon(DEFAULT_WEAPON); setOverlay(null); setPaused(false); setSkillCat("attack"); setScreen("playing"); };
@@ -166,6 +184,8 @@ export default function App() {
       let dt = (now - last) / 1000; last = now; if (dt > 0.05) dt = 0.05;
       const g = game.current, s = statsRef.current;
       if (!pausedRef.current && !g.gameOver) stepGame(g, s, dt, weaponRef.current, io.current);
+      // 播放本幀累積的音效（限量避免一次太多）。
+      if (g.sounds && g.sounds.length) { const n = Math.min(g.sounds.length, 4); for (let i = 0; i < n; i++) audio.play(g.sounds[i]); g.sounds.length = 0; }
       draw(ctx, g, s, dims.current, cam.current, weaponRef.current);
       acc += dt;
       if (acc > 0.08) {
@@ -191,11 +211,11 @@ export default function App() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap');*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}button{font-family:inherit}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:3px}`}</style>
 
       {screen === "menu" ? (
-        <Menu metaV={metaV} onStart={() => setOverlay("start")} onPerm={() => setOverlay("perm")} onStats={() => setOverlay("stats")} onDex={() => setOverlay("dex")} onCodes={() => setOverlay("codes")} />
+        <Menu metaV={metaV} onStart={() => setOverlay("start")} onPerm={() => setOverlay("perm")} onStats={() => setOverlay("stats")} onDex={() => setOverlay("dex")} onCodes={() => setOverlay("codes")} onSettings={() => setOverlay("settings")} />
       ) : (
         <GameScreen
           wrapRef={wrapRef} canvasRef={canvasRef} hud={hud} diamonds={metaV.diamonds} bestKills={metaV.bestKills} paused={paused}
-          onMenu={toMenu} onPause={() => setPaused((p) => !p)} onOpenStats={() => setOverlay("stats")} onOpenDex={() => setOverlay("dex")} onRestart={restart}
+          onMenu={toMenu} onPause={() => setPaused((p) => !p)} onOpenStats={() => setOverlay("stats")} onOpenDex={() => setOverlay("dex")} onOpenSettings={() => setOverlay("settings")} onRestart={restart}
           unlockedWeapons={uw} weapon={weapon} setWeapon={setWeapon}
           cds={cds} onUseAbility={useAbility}
           skillCat={skillCat} setSkillCat={setSkillCat} skillV={skillV} onBuySkill={buySkill}
@@ -207,7 +227,7 @@ export default function App() {
       )}
       {overlay === "perm" && (
         <Overlay title="技能地圖 · 💎鑽石" onClose={() => setOverlay(null)} extra={<span style={{ color: "#67e8f9", fontWeight: 700 }}>💎 {metaV.diamonds.toLocaleString()}</span>}>
-          <SkillMap nodes={metaV.nodes} diamonds={metaV.diamonds} onBuy={buyNode} />
+          <SkillMap nodes={metaV.nodes} diamonds={metaV.diamonds} onBuy={buyNode} onReset={resetTree} />
         </Overlay>
       )}
       {overlay === "stats" && (
@@ -221,6 +241,7 @@ export default function App() {
         </Overlay>
       )}
       {overlay === "codes" && <CodesOverlay metaRef={metaRef} commitMeta={commitMeta} metaV={metaV} onClose={() => setOverlay(null)} />}
+      {overlay === "settings" && <Settings sfxOn={sfxOn} bgmOn={bgmOn} onToggleSfx={toggleSfx} onToggleBgm={toggleBgm} onClose={() => setOverlay(null)} />}
     </div>
   );
 }

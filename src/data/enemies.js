@@ -15,20 +15,24 @@ export const ENEMIES = {
   weaver:   { name: "遊蛇",   shape: "cross",    hp: 13, spd: 0.153, atk: 6,   def: 2,  r: 0.090, rw: 16, col: "#34d399", move: "weave",    trait: null,     info: "螺旋繞圈靠近，能閃避直線子彈。追蹤彈剋之。" },
   warden:   { name: "護盾兵", shape: "star",     hp: 14, spd: 0.153, atk: 7,   def: 4,  r: 0.087, rw: 16, col: "#38bdf8", move: "straight", trait: "shield", info: "外圈有護盾，須先破盾才能傷血。護盾會緩慢回復。" },
   splitter: { name: "分裂體", shape: "diamond",  hp: 16, spd: 0.13,  atk: 6,   def: 2,  r: 0.093, rw: 14, col: "#f0abfc", move: "straight", trait: "split",  info: "死亡時裂成兩隻碎片，清群武器要小心被淹沒。" },
+  scout:    { name: "斥候",   shape: "pentagon", hp: 8,  spd: 0.27,  atk: 7,   def: 1,  r: 0.072, rw: 13, col: "#fde047", move: "straight", trait: null,    info: "五角形高速兵，血薄但逼近極快，別讓它溜到核心。" },
+  colossus: { name: "巨像",   shape: "octagon",  hp: 55, spd: 0.060, atk: 14,  def: 8,  r: 0.132, rw: 30, col: "#94a3b8", move: "straight", trait: null,    info: "八角形重型單位，血厚防高、移動緩慢，中後期的硬骨頭。" },
   boss:     { name: "首領",   shape: "hexagon",  hp: 70, spd: 0.086, atk: 16,  def: 10, r: 0.147, rw: 34, col: "#f43f5e", move: "straight", trait: "boss",   info: "每 5 波出現一次，高血高防高攻。" },
   mini:     { name: "碎片",   shape: "circle",   hp: 5,  spd: 0.24,  atk: 4,   def: 0,  r: 0.050, rw: 4,  col: "#6ee7b7", move: "straight", trait: null,     info: "分裂體死亡後產生的小型敵人。" },
 };
 
 // 玩家可在敵人面板查看的種類（不含 mini，因為它是衍生物）。
-export const ENEMY_DEX = ["grunt", "dasher", "brute", "weaver", "warden", "splitter", "boss"];
+export const ENEMY_DEX = ["grunt", "scout", "dasher", "brute", "weaver", "warden", "splitter", "colossus", "boss"];
 
 // 依波次決定生成哪種敵人（隨機 roll）。
 export function pickType(n) {
   const roll = Math.random();
-  if (n >= 4 && roll < 0.15) return "brute";
-  if (n >= 6 && roll < 0.28) return "dasher";
-  if (n >= 5 && roll < 0.40) return "splitter";
-  if (n >= 7 && roll < 0.54) return "weaver";
+  if (n >= 11 && roll < 0.08) return "colossus";
+  if (n >= 4 && roll < 0.20) return "brute";
+  if (n >= 6 && roll < 0.32) return "dasher";
+  if (n >= 5 && roll < 0.44) return "splitter";
+  if (n >= 7 && roll < 0.56) return "weaver";
   if (n >= 9 && roll < 0.66) return "warden";
+  if (n >= 3 && roll < 0.80) return "scout";
   return "grunt";
 }

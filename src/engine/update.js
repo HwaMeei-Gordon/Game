@@ -29,7 +29,7 @@ export function stepGame(g, s, dt, weaponKey, io) {
     g.survivalTime -= dt; g.spawnTimer -= dt; g.bossTimer -= dt;
     if (g.spawnTimer <= 0) {
       const elapsed = SURVIVAL_SECONDS - g.survivalTime;
-      if (g.bossTimer <= 0) { spawnEnemy(g, "boss"); g.bossTimer = 20; }
+      if (g.bossTimer <= 0) { spawnEnemy(g, "boss"); g.bossTimer = 20; g.sounds.push("boss"); }
       else spawnEnemy(g, null);
       g.spawnTimer = Math.max(0.12, 0.55 - elapsed * 0.0012);
     }
@@ -40,12 +40,13 @@ export function stepGame(g, s, dt, weaponKey, io) {
       if (g.spawnTimer <= 0) {
         const boss = g.spawnQueue === 1 && g.wave % 5 === 0;
         spawnEnemy(g, boss ? "boss" : null);
+        if (boss) g.sounds.push("boss");
         g.spawnQueue--;
         g.spawnTimer = Math.max(0.16, 0.65 - g.wave * 0.01);
       }
     }
     if (g.waveActive && g.spawnQueue === 0 && g.enemies.length === 0) {
-      g.waveActive = false; g.cooldown = 1.4;
+      g.waveActive = false; g.cooldown = 1.4; g.sounds.push("wave");
       io.reportWave(g.wave);
       g.gold += Math.floor((CFG.waveGoldBase + g.wave * CFG.waveGoldSlope) * g.diff.gold * s.goldMult);
       if (g.wave % 5 === 0) io.addDiamonds(Math.floor(4 * g.diff.gem * s.gemYield));
@@ -77,6 +78,7 @@ export function stepGame(g, s, dt, weaponKey, io) {
     if (dist <= rim + 0.012) {
       let armor = s.armor; if (s.fortress && g.hp < g.maxHp * 0.3) armor += 45;
       g.hp -= Math.max(1, e.atk - armor) * s.takeDmgMult;
+      g.sounds.push("hurt");
       ringFx(g, 0, 0, e.col, WORLD.tower * 2.2, 0.22); burst(g, e.x, e.y, e.col, 6);
       g.enemies.splice(i, 1);
       if (g.hp <= 0) {
@@ -189,6 +191,7 @@ export function stepGame(g, s, dt, weaponKey, io) {
 function endRun(g, s, io) {
   if (g.gameOver) return;
   g.gameOver = true;
+  g.sounds.push("gameover");
   if (g.mode === "survival") {
     io.reportSurvival(g.kills);
     io.addDiamonds(Math.floor(g.kills * 0.4 * s.gemYield * g.diff.gem));

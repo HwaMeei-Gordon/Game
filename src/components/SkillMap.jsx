@@ -7,14 +7,15 @@ import { WEAPONS } from "../data/weapons.js";
 import { MONO } from "../styles.js";
 import {
   NODES, NODE_COL, MAX_BIG, nodeById, isBig, countBig,
-  isNodeUnlocked, childrenOf, nodeDesc,
+  isNodeUnlocked, childrenOf, nodeDesc, spentDiamonds, resetFee,
 } from "../data/skillTree.js";
 
 const VW = 1500, VH = 1500, ORIGIN = 750;
 const nodeR = (n) => (n.t === "keystone" ? 32 : isBig(n) ? 28 : n.t === "weapon" || n.t === "core" || n.t === "curse" ? 24 : 21);
 
-export default function SkillMap({ nodes, diamonds, onBuy }) {
+export default function SkillMap({ nodes, diamonds, onBuy, onReset }) {
   const [sel, setSel] = useState("core");
+  const [armed, setArmed] = useState(false);
   const [view, setView] = useState({ tx: 0, ty: 0, zoom: 1.0 });
   const box = useRef(null);
   const drag = useRef({ down: false, moved: false, sx: 0, sy: 0, otx: 0, oty: 0, lp: null, lpFired: false });
@@ -178,12 +179,34 @@ export default function SkillMap({ nodes, diamonds, onBuy }) {
           );
         })()}
       </div>
+      {(() => {
+        const spent = spentDiamonds(nodes), fee = resetFee(spent), refund = spent - fee;
+        return (
+          <div style={{ marginTop: 10, borderTop: "1px solid #1e293b", paddingTop: 10 }}>
+            {spent <= 0 ? (
+              <div style={{ fontSize: 11, color: "#475569", textAlign: "center" }}>尚未點亮任何節點，無需重置</div>
+            ) : armed ? (
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: "#fca5a5", flex: 1, lineHeight: 1.4 }}>確定重置？將清空所有節點，退還 💎{refund.toLocaleString()}（手續費 {fee}）</span>
+                <button onClick={() => { setArmed(false); onReset && onReset(); }} style={{ ...rbtn, border: "1px solid #f43f5e", background: "rgba(244,63,94,0.18)", color: "#fca5a5" }}>確定</button>
+                <button onClick={() => setArmed(false)} style={rbtn}>取消</button>
+              </div>
+            ) : (
+              <button onClick={() => setArmed(true)} style={{ width: "100%", padding: "9px 0", borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: "pointer", border: "1px solid #7f1d1d", background: "rgba(127,29,29,0.25)", color: "#fca5a5" }}>
+                ↺ 重置技能地圖（退還 💎{refund.toLocaleString()}，手續費 {fee}）
+              </button>
+            )}
+          </div>
+        );
+      })()}
       <p style={{ fontSize: 11, color: "#475569", marginTop: 10, lineHeight: 1.6 }}>
         三大區塊：攻擊(左)、防禦(右)、混合(下)。<span style={{ color: "#f43f5e" }}>詛咒節點</span>有負面代價但通往更強分支(永久不可取消)。
         <span style={{ color: "#fbbf24" }}>大型/終極節點</span>最多點亮 {MAX_BIG} 個，可取消退款重新配置。發光虛線圈代表「現在就能點亮」。
+        重置可花鑽石手續費清空整棵樹（含詛咒）重練。
       </p>
     </div>
   );
 }
 
 const zbtn = { width: 30, height: 26, borderRadius: 7, border: "1px solid #334155", background: "rgba(15,23,42,0.7)", color: "#cbd5e1", fontSize: 16, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 };
+const rbtn = { padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", border: "1px solid #334155", background: "rgba(15,23,42,0.7)", color: "#cbd5e1", whiteSpace: "nowrap" };
