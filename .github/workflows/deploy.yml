@@ -25,6 +25,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      # enablement: true 會在首次部署時自動開啟 Pages，省去手動到 Settings 設定。
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - run: npm install
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3

@@ -25,6 +25,7 @@ npm run preview  # 預覽 build 結果
 ## 文件
 
 - **[DESIGN.md](./DESIGN.md)** — 完整的遊戲機制、數值、存檔格式、架構與設計理念說明（供開發者與 AI 閱讀）。
+- **[changelog/](./changelog/)** — 變更紀錄區，一筆變更一個檔案。
 
 ## 架構（模組化）
 

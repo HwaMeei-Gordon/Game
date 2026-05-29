@@ -1,0 +1,193 @@
+// ── 機制：每幀模擬更新 ───────────────────────────────────────
+// 一個 tick 內的所有遊戲邏輯：生成、移動、開火、子彈、碰撞、波次推進。
+// 全部對傳入的 g（遊戲狀態）做就地修改；渲染與 React 都在外層。
+import { CFG, WORLD } from "../data/tuning.js";
+import { WEAPONS } from "../data/weapons.js";
+import { ABILITIES } from "../data/skills.js";
+import { CRIT_MULT } from "./stats.js";
+import { spawnEnemy, startWave, killEnemy, burst, ringFx, damageEnemy, mitigate, mitigateDot, chainHit } from "./game.js";
+
+export function rangeOf(s) {
+  return Math.min(WORLD.rangeMax, WORLD.rangeBase + s.rangeBonus * WORLD.rangeStep);
+}
+
+// io：{ addDiamonds(n), reportWave(n) } — 把跨局的鑽石/最佳波次回報給外層。
+export function stepGame(g, s, dt, weaponKey, io) {
+  if (g.gameOver) return;
+  const wp = WEAPONS[weaponKey];
+  const range = rangeOf(s);
+  g.t += dt;
+
+  for (const kk in g.cds) if (g.cds[kk] > 0) g.cds[kk] = Math.max(0, g.cds[kk] - dt);
+  if (g.buffs.over > 0) g.buffs.over -= dt;
+  if (g.buffs.frost > 0) g.buffs.frost -= dt;
+
+  // 生成 / 波次節奏
+  if (g.waveActive && g.spawnQueue > 0) {
+    g.spawnTimer -= dt;
+    if (g.spawnTimer <= 0) {
+      const boss = g.spawnQueue === 1 && g.wave % 5 === 0;
+      spawnEnemy(g, boss ? "boss" : null);
+      g.spawnQueue--;
+      g.spawnTimer = Math.max(0.16, 0.65 - g.wave * 0.01);
+    }
+  }
+  if (g.waveActive && g.spawnQueue === 0 && g.enemies.length === 0) {
+    g.waveActive = false; g.cooldown = 1.4;
+    io.reportWave(g.wave);
+    g.gold += Math.floor((CFG.waveGoldBase + g.wave * CFG.waveGoldSlope) * g.diff.gold * s.goldMult);
+    if (g.wave % 5 === 0) io.addDiamonds(Math.floor(4 * g.diff.gem * s.gemYield));
+  }
+  if (!g.waveActive) { g.cooldown -= dt; if (g.cooldown <= 0) startWave(g, g.wave + 1); }
+
+  // 敵人移動 / 荊棘 / 撞塔
+  const slow = g.buffs.frost > 0 ? 0.35 : 1;
+  const spdScale = Math.pow(CFG.spdScaleBase, g.wave - 1);
+  for (let i = g.enemies.length - 1; i >= 0; i--) {
+    const e = g.enemies[i], dist = Math.hypot(e.x, e.y) || 1, rim = WORLD.tower + e.r;
+    e.rot += dt * 1.4;
+    if (e.maxShield > 0 && e.shield < e.maxShield) e.shield = Math.min(e.maxShield, e.shield + e.maxShield * 0.04 * dt);
+    if (dist > rim) {
+      if (e.move === "weave") {
+        const inward = e.sr * spdScale * slow, ang = Math.atan2(e.y, e.x);
+        const ndist = dist - inward * dt, na = ang + e.weaveDir * (e.sr * 1.5 / Math.max(dist, 0.15)) * dt;
+        e.x = Math.cos(na) * ndist; e.y = Math.sin(na) * ndist;
+      } else if (e.move === "dash") {
+        const burstF = Math.sin(e.dashT * 2.6) > 0.2 ? 2.3 : 0.45; e.dashT += dt;
+        const v = e.sr * spdScale * slow * burstF; e.x -= (e.x / dist) * v * dt; e.y -= (e.y / dist) * v * dt;
+      } else {
+        const v = e.sr * spdScale * slow; e.x -= (e.x / dist) * v * dt; e.y -= (e.y / dist) * v * dt;
+      }
+    }
+    if (s.thorns > 0 && dist < rim + WORLD.thornsBand) { damageEnemy(e, s.thorns * dt); if (Math.random() < 0.25) burst(g, e.x, e.y, "#fcd34d", 1); }
+    if (e.hp <= 0) { killEnemy(g, s, e, i); continue; }
+    if (dist <= rim + 0.012) {
+      let armor = s.armor; if (s.fortress && g.hp < g.maxHp * 0.3) armor += 45;
+      g.hp -= Math.max(1, e.atk - armor) * s.takeDmgMult;
+      ringFx(g, 0, 0, e.col, WORLD.tower * 2.2, 0.22); burst(g, e.x, e.y, e.col, 6);
+      g.enemies.splice(i, 1);
+      if (g.hp <= 0) {
+        if (s.immortal && !g.immortalUsed) { g.hp = g.maxHp * 0.35; g.immortalUsed = true; ringFx(g, 0, 0, "#4ade80", WORLD.tower * 5, 0.5); burst(g, 0, 0, "#4ade80", 22); }
+        else { g.hp = 0; g.gameOver = true; io.reportWave(g.wave); io.addDiamonds(Math.floor(g.wave * 2 * s.gemYield * g.diff.gem)); }
+      }
+      continue;
+    }
+  }
+
+  // 軌道無人機
+  if (s.orbs > 0) {
+    g.orbAngle += dt * 2.2; const odps = s.damage * WORLD.orbDpsF;
+    for (let o = 0; o < s.orbs; o++) {
+      const a = g.orbAngle + o * 6.28 / s.orbs, ox = Math.cos(a) * WORLD.orbR, oy = Math.sin(a) * WORLD.orbR;
+      for (let j = g.enemies.length - 1; j >= 0; j--) {
+        const e = g.enemies[j];
+        if ((ox - e.x) ** 2 + (oy - e.y) ** 2 < (e.r + 0.03) ** 2) { damageEnemy(e, mitigateDot(odps, e.def) * dt); if (e.hp <= 0) killEnemy(g, s, e, j); }
+      }
+    }
+  }
+
+  // 鎖定範圍內目標
+  const inRange = g.enemies.map((e) => ({ e, dd: Math.hypot(e.x, e.y) })).filter((o) => o.dd <= range).sort((a, b) => a.dd - b.dd);
+  const dm = g.buffs.over > 0 ? 3 : 1;
+
+  if (wp.cont) {
+    if (weaponKey === "laser") {
+      g.beams = [];
+      for (const { e } of inRange.slice(0, s.multishot)) {
+        const crit = Math.random() < s.critChance * 0.3;
+        const perSec = s.damage * wp.dmgF * dm * (crit ? CRIT_MULT : 1);
+        damageEnemy(e, mitigateDot(perSec, e.def) * dt);
+        g.beams.push({ x1: 0, y1: 0, x2: e.x, y2: e.y, col: "#67e8f9", life: 0.05, wgt: 3 });
+        if (e.hp <= 0) { const j = g.enemies.indexOf(e); if (j >= 0) killEnemy(g, s, e, j); }
+      }
+    } else if (weaponKey === "flame") {
+      for (let j = g.enemies.length - 1; j >= 0; j--) {
+        const e = g.enemies[j];
+        if (Math.hypot(e.x, e.y) <= WORLD.flameRange) {
+          const perSec = s.damage * wp.dmgF * dm;
+          damageEnemy(e, mitigateDot(perSec, e.def) * dt);
+          if (Math.random() < 0.15) burst(g, e.x, e.y, "#fb923c", 1);
+          if (e.hp <= 0) killEnemy(g, s, e, j);
+        }
+      }
+    }
+  } else {
+    g.fireCd -= dt;
+    if (g.fireCd <= 0 && inRange.length) {
+      const bspd = WORLD.bulletSpd;
+      if (weaponKey === "chain") {
+        const first = inRange[0].e, crit = Math.random() < s.critChance, a = Math.atan2(first.y, first.x);
+        g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: s.damage * wp.dmgF * dm * (crit ? CRIT_MULT : 1), crit, life: 1.6, type: "chain", hits: [] });
+      } else {
+        for (const { e } of inRange.slice(0, s.multishot)) {
+          const a = Math.atan2(e.y, e.x), crit = Math.random() < s.critChance;
+          g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: s.damage * wp.dmgF * dm * (crit ? CRIT_MULT : 1), crit, life: 1.6, type: weaponKey, hits: [], pierce: s.pierce });
+        }
+      }
+      g.fireCd = 1 / (s.fireRate * wp.rateF);
+    }
+  }
+
+  // 子彈飛行與命中
+  for (let i = g.bullets.length - 1; i >= 0; i--) {
+    const b = g.bullets[i]; let dead = false;
+    if (b.type === "homing") {
+      let best = null, bd = 9;
+      for (const e of g.enemies) { if (b.hits.includes(e.id)) continue; const d = (e.x - b.x) ** 2 + (e.y - b.y) ** 2; if (d < bd) { bd = d; best = e; } }
+      if (best) {
+        const ta = Math.atan2(best.y - b.y, best.x - b.x), ca = Math.atan2(b.vy, b.vx);
+        let da = ta - ca; while (da > Math.PI) da -= 6.28; while (da < -Math.PI) da += 6.28;
+        const na = ca + Math.max(-4 * dt, Math.min(4 * dt, da)); b.vx = Math.cos(na) * WORLD.bulletSpd; b.vy = Math.sin(na) * WORLD.bulletSpd;
+      }
+    }
+    b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
+    if (b.life <= 0 || Math.hypot(b.x, b.y) > WORLD.spawnR + 0.2) dead = true;
+    if (!dead) for (let j = g.enemies.length - 1; j >= 0; j--) {
+      const e = g.enemies[j];
+      if (b.hits && b.hits.includes(e.id)) continue;
+      if ((b.x - e.x) ** 2 + (b.y - e.y) ** 2 < (e.r + WORLD.bulletHit) ** 2) {
+        if (b.type === "chain") { chainHit(g, s, b, e); dead = true; break; }
+        damageEnemy(e, mitigate(b.dmg, e.def)); b.hits.push(e.id);
+        if (b.type === "homing") {
+          ringFx(g, b.x, b.y, "#fbbf24", WORLD.splashR, 0.28);
+          for (const e2 of g.enemies) if (e2.id !== e.id && (e2.x - e.x) ** 2 + (e2.y - e.y) ** 2 < WORLD.splashR * WORLD.splashR) damageEnemy(e2, mitigate(b.dmg * 0.5, e2.def));
+          burst(g, b.x, b.y, "#fbbf24", 5);
+        }
+        if (s.splash > 0 && b.type === "cannon") {
+          ringFx(g, e.x, e.y, "#fde68a", WORLD.splashR, 0.26);
+          for (const e2 of g.enemies) if (e2.id !== e.id && (e2.x - e.x) ** 2 + (e2.y - e.y) ** 2 < WORLD.splashR * WORLD.splashR) damageEnemy(e2, mitigate(b.dmg * s.splash, e2.def));
+        }
+        if (e.hp <= 0) { const k = g.enemies.indexOf(e); if (k >= 0) killEnemy(g, s, e, k); }
+        else burst(g, b.x, b.y, b.crit ? "#fff" : "#fde68a", b.crit ? 4 : 2);
+        if (b.type === "homing") dead = true; else { b.pierce -= 1; if (b.pierce <= 0) dead = true; }
+        break;
+      }
+    }
+    if (dead) g.bullets.splice(i, 1);
+  }
+
+  // 光束、粒子、光環特效衰減
+  for (let i = g.beams.length - 1; i >= 0; i--) { g.beams[i].life -= dt; if (g.beams[i].life <= 0) g.beams.splice(i, 1); }
+  for (let i = g.particles.length - 1; i >= 0; i--) { const p = g.particles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; p.vx *= 0.92; p.vy *= 0.92; if (p.life <= 0) g.particles.splice(i, 1); }
+  for (let i = g.fx.length - 1; i >= 0; i--) { g.fx[i].life -= dt; if (g.fx[i].life <= 0) g.fx.splice(i, 1); }
+}
+
+// 主動技能。回傳是否成功施放。
+export function triggerAbility(g, s, k) {
+  if (!g || g.gameOver || g.cds[k] > 0) return false;
+  const ab = ABILITIES.find((a) => a.key === k);
+  g.cds[k] = ab.cd;
+  if (k === "over") g.buffs.over = ab.dur;
+  if (k === "frost") { g.buffs.frost = ab.dur; ringFx(g, 0, 0, "#67e8f9", WORLD.spawnR * 0.6, 0.5); }
+  if (k === "repair") { g.hp = Math.min(g.maxHp, g.hp + g.maxHp * 0.4); burst(g, 0, 0, "#4ade80", 16); ringFx(g, 0, 0, "#4ade80", WORLD.tower * 4, 0.4); }
+  if (k === "nova") {
+    const dmg = s.damage * 6; ringFx(g, 0, 0, "#f43f5e", WORLD.spawnR * 0.55, 0.5);
+    for (let i = g.enemies.length - 1; i >= 0; i--) {
+      const e = g.enemies[i], dist = Math.hypot(e.x, e.y) || 1;
+      e.x += (e.x / dist) * WORLD.novaPush; e.y += (e.y / dist) * WORLD.novaPush;
+      damageEnemy(e, mitigate(dmg, e.def)); burst(g, e.x, e.y, "#f43f5e", 5);
+      if (e.hp <= 0) killEnemy(g, s, e, i);
+    }
+  }
+  return true;
+}
