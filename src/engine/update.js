@@ -6,7 +6,7 @@ import { WEAPONS } from "../data/weapons.js";
 import { ABILITIES } from "../data/skills.js";
 import { SURVIVAL_SECONDS } from "../data/modes.js";
 import { CRIT_MULT } from "./stats.js";
-import { spawnEnemy, startWave, killEnemy, burst, ringFx, floatText, damageEnemy, mitigate, mitigateDot, chainHit } from "./game.js";
+import { spawnEnemy, startWave, killEnemy, burst, ringFx, floatText, tagDmg, damageEnemy, mitigate, mitigateDot, chainHit } from "./game.js";
 
 export function rangeOf(s) {
   return Math.min(WORLD.rangeMax, WORLD.rangeBase + s.rangeBonus * WORLD.rangeStep) + (s.rangeFlat || 0);
@@ -48,7 +48,7 @@ export function stepGame(g, s, dt, weapons, io) {
       g.waveActive = false; g.cooldown = 1.4; g.sounds.push("wave");
       io.reportWave(g.wave);
       g.gold += Math.floor((CFG.waveGoldBase + g.wave * CFG.waveGoldSlope) * g.diff.gold * s.goldMult);
-      if (g.wave % 5 === 0) io.addDiamonds(Math.floor(4 * g.diff.gem * s.gemYield));
+      if (g.wave % 5 === 0) { const gem = Math.floor(4 * g.diff.gem * s.gemYield); io.addDiamonds(gem); g.runGems += gem; }
     }
     if (!g.waveActive) { g.cooldown -= dt; if (g.cooldown <= 0) startWave(g, g.wave + 1); }
   }
@@ -124,7 +124,8 @@ export function stepGame(g, s, dt, weapons, io) {
           e.lstack = Math.min(800, (e.lstack || 0) + 1);
           const ramp = Math.min(3, Math.pow(1 + ws.rampPerTick, e.lstack));
           const crit = Math.random() < wcrit * 0.3;
-          damageEnemy(e, mitigateDot(ws.damage * ramp * dm * (crit ? CRIT_MULT : 1), e.def) * ws.tickInterval);
+          const ld = mitigateDot(ws.damage * ramp * dm * (crit ? CRIT_MULT : 1), e.def) * ws.tickInterval;
+          damageEnemy(e, ld); tagDmg(g, "laser", ld);
           if (e.hp <= 0) { const j = g.enemies.indexOf(e); if (j >= 0) killEnemy(g, s, e, j); }
         }
         for (const e of g.enemies) if (!ids.has(e.id) && e.lstack) e.lstack = Math.max(0, e.lstack - 3); // 換目標即衰退
@@ -134,7 +135,8 @@ export function stepGame(g, s, dt, weapons, io) {
         const e = g.enemies[j];
         if (Math.hypot(e.x, e.y) <= ws.flameRange) {
           const crit = Math.random() < wcrit * 0.3;
-          damageEnemy(e, mitigateDot(ws.damage * dm * (crit ? CRIT_MULT : 1), e.def) * dt);
+          const fd = mitigateDot(ws.damage * dm * (crit ? CRIT_MULT : 1), e.def) * dt;
+          damageEnemy(e, fd); tagDmg(g, "flame", fd);
           if (ws.flameSlow > 0) { e.slowUntil = g.t + 0.4; e.slowF = ws.flameSlow; }
           if (Math.random() < 0.15) burst(g, e.x, e.y, "#fb923c", 1);
           if (e.hp <= 0) killEnemy(g, s, e, j);
@@ -182,7 +184,7 @@ export function stepGame(g, s, dt, weapons, io) {
       if ((b.x - e.x) ** 2 + (b.y - e.y) ** 2 < (e.r + WORLD.bulletHit) ** 2) {
         if (b.type === "chain") { chainHit(g, s, b, e); dead = true; break; }
         const dealt = mitigate(b.dmg, e.def);
-        damageEnemy(e, dealt); b.hits.push(e.id);
+        damageEnemy(e, dealt); b.hits.push(e.id); tagDmg(g, b.type, dealt);
         floatText(g, b.x, b.y, "" + Math.round(dealt), b.crit ? "#ffffff" : "#fde68a", b.crit);
         if (b.type === "homing") {
           const sr = b.splashR || WORLD.splashR, f = 0.5 + (b.splash || 0);
@@ -219,10 +221,10 @@ function endRun(g, s, io) {
   g.sounds.push("gameover");
   if (g.mode === "survival") {
     io.reportSurvival(g.kills);
-    io.addDiamonds(Math.floor(g.kills * 0.4 * s.gemYield * g.diff.gem));
+    const gem = Math.floor(g.kills * 0.4 * s.gemYield * g.diff.gem); io.addDiamonds(gem); g.runGems += gem;
   } else {
     io.reportWave(g.wave);
-    io.addDiamonds(Math.floor(g.wave * 2 * s.gemYield * g.diff.gem));
+    const gem = Math.floor(g.wave * 2 * s.gemYield * g.diff.gem); io.addDiamonds(gem); g.runGems += gem;
   }
 }
 

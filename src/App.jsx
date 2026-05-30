@@ -85,6 +85,7 @@ export default function App() {
   const [upTab, setUpTab] = useState("cannon");
   const [hud, setHud] = useState({ gold: 0, wave: 1, hp: 100, maxHp: 100, gameOver: false, diff: "normal", mode: "classic", timeLeft: 0, kills: 0 });
   const [cds, setCds] = useState({ over: 0, nova: 0, frost: 0, repair: 0 });
+  const [summary, setSummary] = useState(null); // 結算畫面資料
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   useEffect(() => { pausedRef.current = paused || overlay != null; }, [paused, overlay]);
@@ -121,7 +122,7 @@ export default function App() {
     else if (mode === "survival") opts.survivalStrength = Math.max(1, best);
     game.current = createRun(diffKey, statsRef.current, opts);
     cam.current.zoom = DEFAULT_ZOOM; lastDia.current = metaRef.current.diamonds; wasOver.current = false;
-    setSkillV(cloneSkill(skillRef.current));
+    setSummary(null); setSkillV(cloneSkill(skillRef.current));
   }, []);
 
   // 局內升級
@@ -220,7 +221,12 @@ export default function App() {
         setHud({ gold: Math.floor(g.gold), wave: g.wave, hp: Math.ceil(g.hp), maxHp: Math.round(g.maxHp), gameOver: g.gameOver, diff: g.diffKey, mode: g.mode, timeLeft: g.survivalTime, kills: g.kills });
         setCds({ ...g.cds });
         if (metaRef.current.diamonds !== lastDia.current) { lastDia.current = metaRef.current.diamonds; commitMeta(); }
-        if (g.gameOver && !wasOver.current) { wasOver.current = true; commitMeta(); }
+        if (g.gameOver && !wasOver.current) {
+          wasOver.current = true; commitMeta();
+          const wd = g.wdmg || {}, total = Object.values(wd).reduce((a, b) => a + b, 0) || 1;
+          const weapons = Object.keys(wd).map((wk) => ({ wk, dmg: wd[wk], pct: wd[wk] / total })).sort((a, b) => b.dmg - a.dmg);
+          setSummary({ wave: g.wave, kills: g.kills, time: g.t, gems: g.runGems || 0, mode: g.mode, weapons });
+        }
       }
       raf = requestAnimationFrame(loop);
     };
@@ -241,7 +247,7 @@ export default function App() {
         <Menu metaV={metaV} onStart={() => setOverlay("start")} onPerm={() => setOverlay("perm")} onStats={() => setOverlay("stats")} onDex={() => setOverlay("dex")} onCodes={() => setOverlay("codes")} onSettings={() => setOverlay("settings")} />
       ) : (
         <GameScreen
-          wrapRef={wrapRef} canvasRef={canvasRef} hud={hud} diamonds={metaV.diamonds} bestKills={metaV.bestKills} paused={paused}
+          wrapRef={wrapRef} canvasRef={canvasRef} hud={hud} diamonds={metaV.diamonds} bestKills={metaV.bestKills} paused={paused} summary={summary}
           onMenu={toMenu} onPause={() => setPaused((p) => !p)} onOpenStats={() => setOverlay("stats")} onOpenDex={() => setOverlay("dex")} onOpenSettings={() => setOverlay("settings")} onRestart={restart}
           unlocked={uw} upTab={upTab} setUpTab={setUpTab} skill={skillV} onBuyUpgrade={buyUpgrade}
           speed={speed} onCycleSpeed={cycleSpeed}

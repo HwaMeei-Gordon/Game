@@ -19,7 +19,7 @@ export function createRun(diffKey, stats, opts = {}) {
     buffs: { over: 0, frost: 0 },
     cds: { over: 0, nova: 0, frost: 0, repair: 0 },
     gameOver: false, t: 0,
-    kills: 0, sounds: [], texts: [],
+    kills: 0, sounds: [], texts: [], wdmg: {}, runGems: 0,
     survivalTime: mode === "survival" ? SURVIVAL_SECONDS : 0,
     survivalStrength: Math.max(1, opts.survivalStrength || 1),
     bossTimer: 12,
@@ -100,7 +100,7 @@ export function chainHit(g, s, b, first) {
   let cur = first, hit = [first.id];
   const links = [{ x1: b.x, y1: b.y, x2: first.x, y2: first.y }];
   let dmg = b.dmg;
-  damageEnemy(cur, mitigate(dmg, cur.def));
+  { const d0 = mitigate(dmg, cur.def); damageEnemy(cur, d0); tagDmg(g, "chain", d0); }
   let splits = b.maxSplit || 0; // 折射分裂：剛好擊殺時額外折射（上限由 maxSplit 決定）
   let budget = b.bounces || 3;
   { const k0 = g.enemies.indexOf(cur); if (cur.hp <= 0) { if (k0 >= 0) killEnemy(g, s, cur, k0); if (splits > 0) { splits--; budget++; } } }
@@ -110,7 +110,7 @@ export function chainHit(g, s, b, first) {
     for (const e of g.enemies) { if (hit.includes(e.id)) continue; const d = (e.x - cur.x) ** 2 + (e.y - cur.y) ** 2; if (d < bd) { bd = d; best = e; } }
     if (!best) break;
     links.push({ x1: cur.x, y1: cur.y, x2: best.x, y2: best.y }); hit.push(best.id);
-    damageEnemy(best, mitigate(dmg, best.def));
+    { const dh = mitigate(dmg, best.def); damageEnemy(best, dh); tagDmg(g, "chain", dh); }
     const k = g.enemies.indexOf(best);
     if (best.hp <= 0) { if (k >= 0) killEnemy(g, s, best, k); if (splits > 0) { splits--; budget++; } } // 擊殺→額外折射
     cur = best;
@@ -130,6 +130,9 @@ export function burst(g, x, y, col, n) {
 export function ringFx(g, x, y, col, r, life) {
   g.fx.push({ x, y, col, life, maxLife: life, r, kind: "ring" });
 }
+// 累計各武器造成的傷害（給結算畫面算佔比）。
+export function tagDmg(g, wk, amount) { if (!g.wdmg) g.wdmg = {}; g.wdmg[wk] = (g.wdmg[wk] || 0) + amount; }
+
 // 浮動文字（傷害數字、擊殺金幣跳字）。
 export function floatText(g, x, y, str, col, big) {
   if (!g.texts) g.texts = [];

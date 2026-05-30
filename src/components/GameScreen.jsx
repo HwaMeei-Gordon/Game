@@ -5,12 +5,15 @@ import React from "react";
 import Hud from "./Hud.jsx";
 import AbilityBar from "./AbilityBar.jsx";
 import UpgradeBar from "./UpgradeBar.jsx";
+import { WEAPONS } from "../data/weapons.js";
 import { miniBtn, MONO } from "../styles.js";
+
+const mmss = (t) => { const s = Math.max(0, Math.floor(t)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 
 export default function GameScreen(props) {
   const {
     wrapRef, canvasRef, hud, diamonds, bestKills = 0, paused,
-    onMenu, onPause, onOpenStats, onOpenDex, onOpenSettings, onRestart,
+    onMenu, onPause, onOpenStats, onOpenDex, onOpenSettings, onRestart, summary,
     unlocked, upTab, setUpTab, skill, onBuyUpgrade,
     speed = 1, onCycleSpeed,
     cds, onUseAbility,
@@ -36,12 +39,32 @@ export default function GameScreen(props) {
           </div>
         )}
         {hud.gameOver && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(4,6,10,0.86)", backdropFilter: "blur(3px)" }}>
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(4,6,10,0.9)", backdropFilter: "blur(3px)", padding: "0 24px", overflowY: "auto" }}>
             <div style={{ fontFamily: MONO, fontWeight: 800, fontSize: 26, color: survivedToEnd ? "#4ade80" : "#f43f5e", letterSpacing: 2 }}>{survivedToEnd ? "時間到！" : "基地淪陷"}</div>
-            <div style={{ color: "#94a3b8", margin: "6px 0 3px", fontSize: 14 }}>
-              {survival ? `5 分鐘擊殺 ${hud.kills} 隻 · 最佳 ${Math.max(bestKills, hud.kills)}` : `抵達第 ${hud.wave} 波`}
+            <div style={{ color: "#94a3b8", margin: "4px 0 10px", fontSize: 14 }}>
+              {survival ? `生存擊殺 ${hud.kills} 隻 · 最佳 ${Math.max(bestKills, hud.kills)}` : `抵達第 ${hud.wave} 波`}
             </div>
-            <div style={{ color: "#67e8f9", fontSize: 13, marginBottom: 14 }}>鑽石已結算 · 回選單強化技能地圖</div>
+            {summary && (
+              <div style={{ width: "100%", maxWidth: 320, background: "rgba(15,23,42,0.6)", border: "1px solid #1e293b", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
+                  <span style={{ color: "#94a3b8" }}>擊殺 <b style={{ color: "#fca5a5" }}>{summary.kills}</b></span>
+                  <span style={{ color: "#94a3b8" }}>時間 <b style={{ color: "#67e8f9" }}>{mmss(summary.time)}</b></span>
+                  <span style={{ color: "#94a3b8" }}>獲得 <b style={{ color: "#67e8f9" }}>💎{summary.gems}</b></span>
+                </div>
+                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>各武器傷害佔比</div>
+                {summary.weapons.length === 0 && <div style={{ fontSize: 12, color: "#475569" }}>—</div>}
+                {summary.weapons.map((w) => (
+                  <div key={w.wk} style={{ marginBottom: 4 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#cbd5e1" }}>
+                      <span>{WEAPONS[w.wk] ? WEAPONS[w.wk].name : w.wk}</span><span style={{ fontFamily: MONO, color: "#94a3b8" }}>{Math.round(w.pct * 100)}%</span>
+                    </div>
+                    <div style={{ height: 6, background: "#0f172a", borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${Math.max(2, w.pct * 100)}%`, background: "linear-gradient(90deg,#f43f5e,#fb923c)" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={onRestart} style={{ ...miniBtn, fontSize: 14, padding: "10px 20px", background: "#0e7490", color: "#ecfeff", border: "1px solid #22d3ee" }}>↻ 再來一局</button>
               <button onClick={onMenu} style={{ ...miniBtn, fontSize: 14, padding: "10px 20px" }}>主選單</button>
