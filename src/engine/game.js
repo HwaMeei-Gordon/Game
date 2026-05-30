@@ -19,7 +19,7 @@ export function createRun(diffKey, stats, opts = {}) {
     buffs: { over: 0, frost: 0 },
     cds: { over: 0, nova: 0, frost: 0, repair: 0 },
     gameOver: false, t: 0,
-    kills: 0, sounds: [],
+    kills: 0, sounds: [], texts: [],
     survivalTime: mode === "survival" ? SURVIVAL_SECONDS : 0,
     survivalStrength: Math.max(1, opts.survivalStrength || 1),
     bossTimer: 12,
@@ -74,7 +74,9 @@ export function spawnMini(g, x, y, n) {
 export function killEnemy(g, s, e, idx) {
   g.kills = (g.kills || 0) + 1;
   if (g.sounds) g.sounds.push(e.type === "boss" ? "bosskill" : "kill");
-  g.gold += Math.floor(e.rw * g.diff.gold * s.goldMult);
+  const gold = Math.floor(e.rw * g.diff.gold * s.goldMult);
+  g.gold += gold;
+  floatText(g, e.x, e.y - e.r, "+" + gold, "#fcd34d");
   if (s.lifesteal > 0) g.hp = Math.min(g.maxHp, g.hp + g.maxHp * 0.004);
   burst(g, e.x, e.y, e.col, e.type === "boss" ? 22 : 9);
   ringFx(g, e.x, e.y, e.col, e.r * 2.6, 0.32);
@@ -127,4 +129,10 @@ export function burst(g, x, y, col, n) {
 // 擴張光環特效（命中、爆炸、AOE 範圍可視化）。
 export function ringFx(g, x, y, col, r, life) {
   g.fx.push({ x, y, col, life, maxLife: life, r, kind: "ring" });
+}
+// 浮動文字（傷害數字、擊殺金幣跳字）。
+export function floatText(g, x, y, str, col, big) {
+  if (!g.texts) g.texts = [];
+  if (g.texts.length > 60) return; // 上限避免爆量
+  g.texts.push({ x: x + (Math.random() - 0.5) * 0.06, y, vy: -0.5, life: 0.7, maxLife: 0.7, str, col, big: !!big });
 }

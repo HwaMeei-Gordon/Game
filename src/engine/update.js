@@ -6,7 +6,7 @@ import { WEAPONS } from "../data/weapons.js";
 import { ABILITIES } from "../data/skills.js";
 import { SURVIVAL_SECONDS } from "../data/modes.js";
 import { CRIT_MULT } from "./stats.js";
-import { spawnEnemy, startWave, killEnemy, burst, ringFx, damageEnemy, mitigate, mitigateDot, chainHit } from "./game.js";
+import { spawnEnemy, startWave, killEnemy, burst, ringFx, floatText, damageEnemy, mitigate, mitigateDot, chainHit } from "./game.js";
 
 export function rangeOf(s) {
   return Math.min(WORLD.rangeMax, WORLD.rangeBase + s.rangeBonus * WORLD.rangeStep) + (s.rangeFlat || 0);
@@ -181,7 +181,9 @@ export function stepGame(g, s, dt, weapons, io) {
       if (b.hits && b.hits.includes(e.id)) continue;
       if ((b.x - e.x) ** 2 + (b.y - e.y) ** 2 < (e.r + WORLD.bulletHit) ** 2) {
         if (b.type === "chain") { chainHit(g, s, b, e); dead = true; break; }
-        damageEnemy(e, mitigate(b.dmg, e.def)); b.hits.push(e.id);
+        const dealt = mitigate(b.dmg, e.def);
+        damageEnemy(e, dealt); b.hits.push(e.id);
+        floatText(g, b.x, b.y, "" + Math.round(dealt), b.crit ? "#ffffff" : "#fde68a", b.crit);
         if (b.type === "homing") {
           const sr = b.splashR || WORLD.splashR, f = 0.5 + (b.splash || 0);
           ringFx(g, b.x, b.y, "#fbbf24", sr, 0.28);
@@ -207,6 +209,7 @@ export function stepGame(g, s, dt, weapons, io) {
   for (let i = g.beams.length - 1; i >= 0; i--) { g.beams[i].life -= dt; if (g.beams[i].life <= 0) g.beams.splice(i, 1); }
   for (let i = g.particles.length - 1; i >= 0; i--) { const p = g.particles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; p.vx *= 0.92; p.vy *= 0.92; if (p.life <= 0) g.particles.splice(i, 1); }
   for (let i = g.fx.length - 1; i >= 0; i--) { g.fx[i].life -= dt; if (g.fx[i].life <= 0) g.fx.splice(i, 1); }
+  if (g.texts) for (let i = g.texts.length - 1; i >= 0; i--) { const t = g.texts[i]; t.y += t.vy * dt; t.life -= dt; if (t.life <= 0) g.texts.splice(i, 1); }
 }
 
 // 結束本局並依模式結算（死亡或生存時間到都走這裡）。

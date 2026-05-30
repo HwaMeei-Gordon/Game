@@ -99,6 +99,15 @@ export function draw(ctx, g, s, d, camera, weapons) {
     ctx.save(); ctx.shadowBlur = 9; ctx.shadowColor = "#a5f3fc"; ctx.fillStyle = "#cffafe"; ctx.beginPath(); ctx.arc(ox, oy, L(0.022), 0, 6.2832); ctx.fill(); ctx.restore();
   }
 
+  // 浮動傷害數字 / 擊殺金幣跳字
+  if (g.texts) for (const tx of g.texts) {
+    ctx.save(); ctx.globalAlpha = Math.max(0, tx.life / tx.maxLife);
+    ctx.fillStyle = tx.col; ctx.font = `700 ${tx.big ? 15 : 12}px 'Rajdhani','Noto Sans TC',sans-serif`;
+    ctx.textAlign = "center"; ctx.shadowBlur = 4; ctx.shadowColor = "rgba(0,0,0,0.85)";
+    ctx.fillText(tx.str, X(tx.x), Y(tx.y)); ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+
   // 塔（旋轉護環 + 漸層核心 + 光暈 + 脈動）
   const TR = L(WORLD.tower);
   ctx.save(); ctx.translate(cx, cy); ctx.rotate(g.t * 0.5);
