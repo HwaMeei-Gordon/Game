@@ -158,8 +158,8 @@ export function stepGame(g, s, dt, weapons, io) {
           ids.add(e.id);
           e.lstack = Math.min(800, (e.lstack || 0) + 1);
           const ramp = Math.min(3, Math.pow(1 + ws.rampPerTick, e.lstack));
-          const crit = Math.random() < wcrit * 0.3;
-          const ld = mitigateDot(ws.damage * ramp * dm * (crit ? CRIT_MULT : 1), Math.max(0, e.def - ws.armorPen)) * ws.tickInterval;
+          // 持續型武器：暴擊以「期望值」穩定加成（每跳結算，隨機會抖動且難感知）
+          const ld = mitigateDot(ws.damage * ramp * dm * (1 + wcrit * (CRIT_MULT - 1)), Math.max(0, e.def - ws.armorPen)) * ws.tickInterval;
           damageEnemy(e, ld); tagDmg(g, "laser", ld);
           if (e.hp <= 0) { const j = g.enemies.indexOf(e); if (j >= 0) killEnemy(g, s, e, j); }
         }
@@ -169,8 +169,8 @@ export function stepGame(g, s, dt, weapons, io) {
       for (let j = g.enemies.length - 1; j >= 0; j--) {
         const e = g.enemies[j];
         if (Math.hypot(e.x, e.y) <= ws.flameRange) {
-          const crit = Math.random() < wcrit * 0.3;
-          const fd = mitigateDot(ws.damage * dm * (crit ? CRIT_MULT : 1), Math.max(0, e.def - ws.armorPen)) * dt;
+          // 持續型武器：暴擊以「期望值」穩定加成
+          const fd = mitigateDot(ws.damage * dm * (1 + wcrit * (CRIT_MULT - 1)), Math.max(0, e.def - ws.armorPen)) * dt;
           damageEnemy(e, fd); tagDmg(g, "flame", fd);
           if (ws.flameSlow > 0) { e.slowUntil = g.t + 0.4; e.slowF = ws.flameSlow; }
           if (Math.random() < 0.15) burst(g, e.x, e.y, "#fb923c", 1);
