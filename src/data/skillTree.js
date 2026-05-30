@@ -15,6 +15,7 @@ export const BASE_TREE = [
   { id: "b_dmg3",  x: -210, y: 330, parent: "b_dmg2",  name: "攻擊力", icon: "dmg",   cost: 110, bonus: { dmgM: 0.12 } },
   { id: "b_crit2", x: -90,  y: 330, parent: "b_crit1", name: "暴擊",   icon: "crit",  cost: 120, bonus: { critC: 0.05 } },
   { id: "b_dmg4",  x: -210, y: 440, parent: "b_dmg3",  name: "毀滅",   icon: "dmg",   cost: 160, bonus: { dmgM: 0.15 } },
+  { id: "b_pen",   x: -90,  y: 440, parent: "b_crit2",  name: "破甲",   icon: "pierce",cost: 150, bonus: { armorPen: 12 }, info: "降低所有武器面對敵方的有效防禦（全武器通用穿甲）。" },
   // 防禦主幹（中）
   { id: "b_hp1",   x: 0,    y: 110, parent: "b_core",  name: "生命",   icon: "hp",    cost: 40,  bonus: { hpM: 0.10 } },
   { id: "b_hp2",   x: -45,  y: 220, parent: "b_hp1",   name: "生命",   icon: "hp",    cost: 70,  bonus: { hpM: 0.12 } },
@@ -65,6 +66,7 @@ export const WEAPON_TREE = {
     { id: "l_dmg1",   x: 0,    y: 0,   parent: null,      name: "聚能",   icon: "dmg",    cost: 60,  bonus: { dmgM: 0.12 } },
     { id: "l_dmg2",   x: -110, y: 110, parent: "l_dmg1",  name: "高頻",   icon: "dmg",    cost: 120, bonus: { dmgM: 0.15 } },
     { id: "l_crit1",  x: -110, y: 220, parent: "l_dmg2",  name: "灼點",   icon: "crit",   cost: 160, bonus: { critC: 0.08 } },
+    { id: "l_pen",    x: -220, y: 110, parent: "l_dmg1",  name: "熔甲",   icon: "pierce", cost: 150, bonus: { armorPen: 14 } },
     { id: "l_dmg3",   x: -110, y: 330, parent: "l_crit1", name: "湮滅光",  icon: "dmg",   cost: 220, bonus: { dmgM: 0.22 }, special: 1, info: "招牌：單體 DPS 暴增。" },
     { id: "l_beam1",  x: 0,    y: 110, parent: "l_dmg1",  name: "分光",   icon: "multi",  cost: 150, bonus: { multishot: 1 } },
     { id: "l_beam2",  x: 0,    y: 220, parent: "l_beam1", name: "稜射",   icon: "multi",  cost: 220, bonus: { multishot: 1 } },
@@ -79,6 +81,7 @@ export const WEAPON_TREE = {
     { id: "ch_dmg2",  x: -110, y: 110, parent: "ch_dmg1", name: "高壓",   icon: "dmg",    cost: 120, bonus: { dmgM: 0.15 } },
     { id: "ch_rate1", x: -110, y: 220, parent: "ch_dmg2", name: "充能",   icon: "rate",   cost: 140, bonus: { rateM: 0.12 } },
     { id: "ch_crit1", x: -110, y: 330, parent: "ch_rate1",name: "導體",   icon: "crit",   cost: 180, bonus: { critC: 0.06 } },
+    { id: "ch_pen",   x: -210, y: 220, parent: "ch_dmg2", name: "離子穿甲",icon: "pierce", cost: 150, bonus: { armorPen: 12 } },
     { id: "ch_bounce1",x: 0,   y: 110, parent: "ch_dmg1", name: "增幅",   icon: "chain",  cost: 120, bonus: { bounce: 1 } },
     { id: "ch_bounce2",x: 0,   y: 220, parent: "ch_bounce1",name: "躍遷", icon: "chain",  cost: 160, bonus: { bounce: 1 } },
     { id: "ch_split1",x: 0,    y: 330, parent: "ch_bounce2",name: "裂變", icon: "splash", cost: 200, bonus: { split: 1 } },
@@ -91,6 +94,7 @@ export const WEAPON_TREE = {
     { id: "f_dmg1",   x: 0,    y: 0,   parent: null,      name: "高溫",   icon: "dmg",    cost: 60,  bonus: { dmgM: 0.12 } },
     { id: "f_dmg2",   x: -100, y: 110, parent: "f_dmg1",  name: "白熱",   icon: "dmg",    cost: 120, bonus: { dmgM: 0.15 } },
     { id: "f_crit1",  x: -100, y: 220, parent: "f_dmg2",  name: "熔蝕",   icon: "crit",   cost: 150, bonus: { critC: 0.06 } },
+    { id: "f_pen",    x: -200, y: 110, parent: "f_dmg1",  name: "熔甲",   icon: "pierce", cost: 140, bonus: { armorPen: 12 } },
     { id: "f_dmg3",   x: -100, y: 330, parent: "f_crit1", name: "煉獄",   icon: "dmg",    cost: 200, bonus: { dmgM: 0.2 } },
     { id: "f_range1", x: 0,    y: 110, parent: "f_dmg1",  name: "擴焰",   icon: "flame",  cost: 100, bonus: { frange: 0.15 } },
     { id: "f_range2", x: 0,    y: 220, parent: "f_range1",name: "燎原",   icon: "flame",  cost: 150, bonus: { frange: 0.20 } },
@@ -130,6 +134,7 @@ export function nodeDesc(nd) {
   if (b.goldM) parts.push(`金幣 +${(b.goldM * 100).toFixed(0)}%`);
   if (b.gem) parts.push(`鑽石 +${(b.gem * 100).toFixed(0)}%`);
   if (b.rangeFlat) parts.push(`攻擊範圍 +${b.rangeFlat}`);
+  if (b.armorPen) parts.push(`穿甲 +${b.armorPen}`);
   if (b.multishot) parts.push(`+${b.multishot} 發/束`);
   if (b.pierce) parts.push(`穿透 +${b.pierce}`);
   if (b.splash) parts.push(`濺射 +${(b.splash * 100).toFixed(0)}%`);

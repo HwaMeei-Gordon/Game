@@ -159,7 +159,7 @@ export function stepGame(g, s, dt, weapons, io) {
           e.lstack = Math.min(800, (e.lstack || 0) + 1);
           const ramp = Math.min(3, Math.pow(1 + ws.rampPerTick, e.lstack));
           const crit = Math.random() < wcrit * 0.3;
-          const ld = mitigateDot(ws.damage * ramp * dm * (crit ? CRIT_MULT : 1), e.def) * ws.tickInterval;
+          const ld = mitigateDot(ws.damage * ramp * dm * (crit ? CRIT_MULT : 1), Math.max(0, e.def - ws.armorPen)) * ws.tickInterval;
           damageEnemy(e, ld); tagDmg(g, "laser", ld);
           if (e.hp <= 0) { const j = g.enemies.indexOf(e); if (j >= 0) killEnemy(g, s, e, j); }
         }
@@ -170,7 +170,7 @@ export function stepGame(g, s, dt, weapons, io) {
         const e = g.enemies[j];
         if (Math.hypot(e.x, e.y) <= ws.flameRange) {
           const crit = Math.random() < wcrit * 0.3;
-          const fd = mitigateDot(ws.damage * dm * (crit ? CRIT_MULT : 1), e.def) * dt;
+          const fd = mitigateDot(ws.damage * dm * (crit ? CRIT_MULT : 1), Math.max(0, e.def - ws.armorPen)) * dt;
           damageEnemy(e, fd); tagDmg(g, "flame", fd);
           if (ws.flameSlow > 0) { e.slowUntil = g.t + 0.4; e.slowF = ws.flameSlow; }
           if (Math.random() < 0.15) burst(g, e.x, e.y, "#fb923c", 1);
@@ -186,12 +186,12 @@ export function stepGame(g, s, dt, weapons, io) {
           const n = Math.max(1, Math.min(ws.multishot, inRange.length));
           for (let bi = 0; bi < n; bi++) {
             const tgt = inRange[bi].e, crit = Math.random() < wcrit, a = Math.atan2(tgt.y, tgt.x);
-            g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: "chain", hits: [], spd: bspd, bounces: ws.bounces, maxSplit: ws.maxSplit });
+            g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: "chain", hits: [], spd: bspd, bounces: ws.bounces, maxSplit: ws.maxSplit, pen: ws.armorPen });
           }
         } else {
           for (const { e } of inRange.slice(0, ws.multishot)) {
             const a = Math.atan2(e.y, e.x), crit = Math.random() < wcrit;
-            g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: wk, hits: [], spd: bspd, pierce: ws.pierce, splash: ws.splash, splashR: ws.splashRadius, frags: ws.fragCount });
+            g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: wk, hits: [], spd: bspd, pierce: ws.pierce, splash: ws.splash, splashR: ws.splashRadius, frags: ws.fragCount, pen: ws.armorPen });
           }
         }
         g.fireCd[wk] = 1 / ws.fireRate;
@@ -218,27 +218,28 @@ export function stepGame(g, s, dt, weapons, io) {
       if (b.hits && b.hits.includes(e.id)) continue;
       if ((b.x - e.x) ** 2 + (b.y - e.y) ** 2 < (e.r + WORLD.bulletHit) ** 2) {
         if (b.type === "chain") { chainHit(g, s, b, e); dead = true; break; }
-        const dealt = mitigate(b.dmg, e.def);
+        const pen = b.pen || 0;
+        const dealt = mitigate(b.dmg, Math.max(0, e.def - pen));
         damageEnemy(e, dealt); b.hits.push(e.id); tagDmg(g, b.type === "frag" ? "shard" : b.type, dealt);
         floatText(g, b.x, b.y, "" + Math.round(dealt), b.crit ? "#ffffff" : "#fde68a", b.crit);
         if (b.type === "shard") {
           const n = Math.round(b.frags || 4), fs = (b.spd || WORLD.bulletSpd) * 0.85;
           for (let f = 0; f < n; f++) {
             const ang = (f / n) * 6.2832 + Math.random() * 0.4;
-            g.bullets.push({ x: b.x, y: b.y, vx: Math.cos(ang) * fs, vy: Math.sin(ang) * fs, dmg: b.dmg * 0.4, crit: b.crit, life: 0.5, type: "frag", hits: [], spd: fs, pierce: 1 });
+            g.bullets.push({ x: b.x, y: b.y, vx: Math.cos(ang) * fs, vy: Math.sin(ang) * fs, dmg: b.dmg * 0.4, crit: b.crit, life: 0.5, type: "frag", hits: [], spd: fs, pierce: 1, pen });
           }
           ringFx(g, b.x, b.y, "#f0abfc", WORLD.splashR * 0.8, 0.24); burst(g, b.x, b.y, "#f0abfc", 6);
         }
         if (b.type === "homing") {
           const sr = b.splashR || WORLD.splashR, f = 0.5 + (b.splash || 0);
           ringFx(g, b.x, b.y, "#fbbf24", sr, 0.28);
-          for (const e2 of g.enemies) if (e2.id !== e.id && (e2.x - e.x) ** 2 + (e2.y - e.y) ** 2 < sr * sr) damageEnemy(e2, mitigate(b.dmg * f, e2.def));
+          for (const e2 of g.enemies) if (e2.id !== e.id && (e2.x - e.x) ** 2 + (e2.y - e.y) ** 2 < sr * sr) damageEnemy(e2, mitigate(b.dmg * f, Math.max(0, e2.def - pen)));
           burst(g, b.x, b.y, "#fbbf24", 5);
         }
         if (b.type === "cannon" && b.splash > 0) {
           const sr = b.splashR || WORLD.splashR;
           ringFx(g, e.x, e.y, "#fde68a", sr, 0.26);
-          for (const e2 of g.enemies) if (e2.id !== e.id && (e2.x - e.x) ** 2 + (e2.y - e.y) ** 2 < sr * sr) damageEnemy(e2, mitigate(b.dmg * b.splash, e2.def));
+          for (const e2 of g.enemies) if (e2.id !== e.id && (e2.x - e.x) ** 2 + (e2.y - e.y) ** 2 < sr * sr) damageEnemy(e2, mitigate(b.dmg * b.splash, Math.max(0, e2.def - pen)));
         }
         if (e.hp <= 0) { const k = g.enemies.indexOf(e); if (k >= 0) killEnemy(g, s, e, k); }
         else burst(g, b.x, b.y, b.crit ? "#fff" : "#fde68a", b.crit ? 4 : 2);

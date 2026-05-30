@@ -64,6 +64,8 @@ export function derive(meta, skill) {
       flameRange,
       bulletSpeed: WORLD.bulletSpd * wp.spd * (1 + (ws.bspd || 0) * 0.3),
       splashRadius: WORLD.splashR,
+      // 穿甲：降低敵方有效防禦（基礎樹/道具 + 武器樹 + 穿透每級 4 點）
+      armorPen: Bg("armorPen") + Wt("armorPen") + ((ws.pierce || 0) + Wt("pierce")) * 4,
       // 雷射：傷害計算頻率（tick 間隔，越小越頻繁）與每跳傷害增幅（局內 + 武器樹）
       tickInterval: Math.max(0.02, 0.12 / (1 + ((ws.ltick || 0) + Wt("ltick")) * 0.4)),
       rampPerTick: 0.001 + ((ws.lamp || 0) + Wt("lamp")) * 0.0015,

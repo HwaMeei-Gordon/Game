@@ -112,7 +112,8 @@ export function chainHit(g, s, b, first) {
   let cur = first, hit = [first.id];
   const links = [{ x1: b.x, y1: b.y, x2: first.x, y2: first.y }];
   let dmg = b.dmg;
-  { const d0 = mitigate(dmg, cur.def); damageEnemy(cur, d0); tagDmg(g, "chain", d0); }
+  const pen = b.pen || 0;
+  { const d0 = mitigate(dmg, Math.max(0, cur.def - pen)); damageEnemy(cur, d0); tagDmg(g, "chain", d0); }
   let splits = b.maxSplit || 0; // 折射分裂：剛好擊殺時額外折射（上限由 maxSplit 決定）
   let budget = b.bounces || 3;
   { const k0 = g.enemies.indexOf(cur); if (cur.hp <= 0) { if (k0 >= 0) killEnemy(g, s, cur, k0); if (splits > 0) { splits--; budget++; } } }
@@ -122,7 +123,7 @@ export function chainHit(g, s, b, first) {
     for (const e of g.enemies) { if (hit.includes(e.id)) continue; const d = (e.x - cur.x) ** 2 + (e.y - cur.y) ** 2; if (d < bd) { bd = d; best = e; } }
     if (!best) break;
     links.push({ x1: cur.x, y1: cur.y, x2: best.x, y2: best.y }); hit.push(best.id);
-    { const dh = mitigate(dmg, best.def); damageEnemy(best, dh); tagDmg(g, "chain", dh); }
+    { const dh = mitigate(dmg, Math.max(0, best.def - pen)); damageEnemy(best, dh); tagDmg(g, "chain", dh); }
     const k = g.enemies.indexOf(best);
     if (best.hp <= 0) { if (k >= 0) killEnemy(g, s, best, k); if (splits > 0) { splits--; budget++; } } // 擊殺→額外折射
     cur = best;
