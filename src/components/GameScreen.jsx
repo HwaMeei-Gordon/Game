@@ -14,6 +14,7 @@ export default function GameScreen(props) {
   const {
     wrapRef, canvasRef, hud, diamonds, bestKills = 0, paused,
     onMenu, onPause, onOpenStats, onOpenDex, onOpenSettings, onRestart, summary,
+    tip, onAdvanceTip,
     unlocked, upTab, setUpTab, skill, onBuyUpgrade,
     speed = 1, onCycleSpeed,
     cds, onUseAbility,
@@ -29,6 +30,12 @@ export default function GameScreen(props) {
         <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
         <div style={{ position: "absolute", top: 6, right: 8, fontSize: 9, color: "#475569" }}>雙指縮放</div>
         <button onClick={onCycleSpeed} style={{ position: "absolute", top: 6, left: 8, padding: "4px 10px", borderRadius: 8, border: `1px solid ${speed > 1 ? "#fbbf24" : "#334155"}`, background: speed > 1 ? "rgba(251,191,36,0.18)" : "rgba(15,23,42,0.75)", color: speed > 1 ? "#fcd34d" : "#cbd5e1", fontFamily: MONO, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{speed}×</button>
+        {tip && !paused && !hud.gameOver && (
+          <div onClick={onAdvanceTip} style={{ position: "absolute", left: 12, right: 12, bottom: 12, background: "rgba(11,18,32,0.94)", border: "1px solid #22d3ee", borderRadius: 12, padding: "11px 13px", cursor: "pointer", boxShadow: "0 4px 18px rgba(0,0,0,0.5)" }}>
+            <div style={{ fontSize: 13, color: "#e2e8f0", lineHeight: 1.5 }}>{tip}</div>
+            <div style={{ fontSize: 10, color: "#67e8f9", marginTop: 5, textAlign: "right" }}>點一下繼續 ›</div>
+          </div>
+        )}
         {paused && !hud.gameOver && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", gap: 14, alignItems: "center", justifyContent: "center", background: "rgba(4,6,10,0.55)" }}>
             <span style={{ fontFamily: MONO, fontSize: 22, color: "#67e8f9", letterSpacing: 2 }}>⏸ 已暫停</span>

@@ -10,6 +10,7 @@ import {
 } from "./data/skillTree.js";
 import { RELICS } from "./data/relics.js";
 import { HEADSTART_OFFSET } from "./data/modes.js";
+import { TIPS } from "./data/tips.js";
 import { derive } from "./engine/stats.js";
 import { legacyDecodeV3 } from "./engine/save.js";
 import { createRun, cumulativeWaveGold } from "./engine/game.js";
@@ -27,6 +28,9 @@ import StatsPanel from "./components/StatsPanel.jsx";
 import EnemyPanel from "./components/EnemyPanel.jsx";
 import CodesOverlay from "./components/CodesOverlay.jsx";
 import Settings from "./components/Settings.jsx";
+import HelpOverlay from "./components/HelpOverlay.jsx";
+
+const ONBOARD_KEY = "thetower_onboarded";
 
 // 全節點索引（基礎樹 + 各武器樹），供購買時依 id 查定義。
 const NODE_INDEX = {};
@@ -86,6 +90,10 @@ export default function App() {
   const [hud, setHud] = useState({ gold: 0, wave: 1, hp: 100, maxHp: 100, gameOver: false, diff: "normal", mode: "classic", timeLeft: 0, kills: 0 });
   const [cds, setCds] = useState({ over: 0, nova: 0, frost: 0, repair: 0 });
   const [summary, setSummary] = useState(null); // 結算畫面資料
+  const [tipIdx, setTipIdx] = useState(-1); // 新手提示索引（-1 = 不顯示）
+  const advanceTip = useCallback(() => {
+    setTipIdx((i) => { const n = i + 1; if (n >= TIPS.length) { try { localStorage.setItem(ONBOARD_KEY, "1"); } catch {} return -1; } return n; });
+  }, []);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   useEffect(() => { pausedRef.current = paused || overlay != null; }, [paused, overlay]);
@@ -171,7 +179,11 @@ export default function App() {
     if (triggerAbility(g, statsRef.current, k)) { setCds({ ...g.cds }); audio.play("ability"); }
   }, []);
 
-  const startGame = (dk, mode = "classic") => { newRun(dk, mode); setOverlay(null); setPaused(false); setSpeed(1); setUpTab("cannon"); setScreen("playing"); };
+  const startGame = (dk, mode = "classic") => {
+    newRun(dk, mode); setOverlay(null); setPaused(false); setSpeed(1); setUpTab("cannon"); setScreen("playing");
+    let seen = false; try { seen = localStorage.getItem(ONBOARD_KEY) === "1"; } catch {}
+    setTipIdx(seen ? -1 : 0); // 首次遊玩才顯示漸進提示
+  };
   const toMenu = () => { setScreen("menu"); setOverlay(null); };
   const restart = () => { newRun(game.current.diffKey, game.current.mode); setPaused(false); setUpTab("cannon"); };
 
@@ -244,7 +256,7 @@ export default function App() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap');*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}button{font-family:inherit}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:3px}`}</style>
 
       {screen === "menu" ? (
-        <Menu metaV={metaV} onStart={() => setOverlay("start")} onPerm={() => setOverlay("perm")} onStats={() => setOverlay("stats")} onDex={() => setOverlay("dex")} onCodes={() => setOverlay("codes")} onSettings={() => setOverlay("settings")} />
+        <Menu metaV={metaV} onStart={() => setOverlay("start")} onPerm={() => setOverlay("perm")} onStats={() => setOverlay("stats")} onDex={() => setOverlay("dex")} onCodes={() => setOverlay("codes")} onSettings={() => setOverlay("settings")} onHelp={() => setOverlay("help")} />
       ) : (
         <GameScreen
           wrapRef={wrapRef} canvasRef={canvasRef} hud={hud} diamonds={metaV.diamonds} bestKills={metaV.bestKills} paused={paused} summary={summary}
@@ -252,6 +264,7 @@ export default function App() {
           unlocked={uw} upTab={upTab} setUpTab={setUpTab} skill={skillV} onBuyUpgrade={buyUpgrade}
           speed={speed} onCycleSpeed={cycleSpeed}
           cds={cds} onUseAbility={useAbility}
+          tip={tipIdx >= 0 ? TIPS[tipIdx] : null} onAdvanceTip={advanceTip}
         />
       )}
 
@@ -269,6 +282,7 @@ export default function App() {
       )}
       {overlay === "codes" && <CodesOverlay metaRef={metaRef} commitMeta={commitMeta} metaV={metaV} onClose={() => setOverlay(null)} />}
       {overlay === "settings" && <Settings sfxOn={sfxOn} bgmOn={bgmOn} onToggleSfx={toggleSfx} onToggleBgm={toggleBgm} onClose={() => setOverlay(null)} />}
+      {overlay === "help" && <HelpOverlay onClose={() => setOverlay(null)} />}
     </div>
   );
 }
