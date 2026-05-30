@@ -5,7 +5,7 @@ import React, { useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 import { WEAPONS } from "../data/weapons.js";
 import { ITEMS, DEF_ITEMS, WEAPON_CATS, weaponItemCost, globalItemCost } from "../data/skills.js";
-import { MONO } from "../styles.js";
+import { MONO, tabStyle } from "../styles.js";
 
 const CATS = [["atk", "攻擊", "#fca5a5"], ["def", "防禦", "#7dd3fc"], ["sp", "特殊", "#d8b4fe"]];
 
@@ -22,7 +22,7 @@ export default function UpgradeBar({ unlocked, upTab, setUpTab, skill, gold, onB
         {unlocked.map((tk) => {
           const active = wk === tk;
           return (
-            <button key={tk} onClick={() => setUpTab(tk)} style={{ flex: "0 0 auto", width: 76, padding: "5px 4px", borderRadius: 8, border: `1px solid ${active ? "#f87171" : "#1e293b"}`, background: active ? "rgba(248,113,113,0.14)" : "rgba(15,23,42,0.5)", color: active ? "#fca5a5" : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+            <button key={tk} onClick={() => setUpTab(tk)} style={tabStyle(active, "#f87171", 78)}>
               <Icon type={WEAPONS[tk].icon} size={13} color={active ? "#fca5a5" : "#64748b"} />{WEAPONS[tk].name}
             </button>
           );
@@ -30,7 +30,7 @@ export default function UpgradeBar({ unlocked, upTab, setUpTab, skill, gold, onB
       </div>
       <div style={{ display: "flex", gap: 5, padding: "0 10px 5px", flexShrink: 0 }}>
         {CATS.map(([k, label, c]) => (
-          <button key={k} onClick={() => setCat(k)} style={{ flex: 1, padding: "5px 0", borderRadius: 7, border: `1px solid ${cat === k ? c : "#1e293b"}`, background: cat === k ? c + "22" : "rgba(15,23,42,0.5)", color: cat === k ? c : "#64748b", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>{label}</button>
+          <button key={k} onClick={() => setCat(k)} style={tabStyle(cat === k, c)}>{label}</button>
         ))}
       </div>
       <div style={{ flexShrink: 0, padding: "0 10px 10px" }}>

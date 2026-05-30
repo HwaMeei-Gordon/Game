@@ -6,7 +6,7 @@ import Hud from "./Hud.jsx";
 import AbilityBar from "./AbilityBar.jsx";
 import UpgradeBar from "./UpgradeBar.jsx";
 import { WEAPONS } from "../data/weapons.js";
-import { miniBtn, MONO } from "../styles.js";
+import { MONO, btn } from "../styles.js";
 
 const mmss = (t) => { const s = Math.max(0, Math.floor(t)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 
@@ -39,12 +39,12 @@ export default function GameScreen(props) {
         {paused && !hud.gameOver && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", gap: 12, alignItems: "center", justifyContent: "center", background: "rgba(4,6,10,0.7)", backdropFilter: "blur(2px)" }}>
             <span style={{ fontFamily: MONO, fontSize: 22, color: "#67e8f9", letterSpacing: 2 }}>⏸ 已暫停</span>
-            <div style={{ display: "flex", flexDirection: "column", gap: 9, width: 200 }}>
-              <button onClick={onPause} style={{ ...miniBtn, fontSize: 15, padding: "11px 0", background: "#0e7490", color: "#ecfeff", border: "1px solid #22d3ee" }}>▶ 繼續</button>
-              <button onClick={onOpenStats} style={{ ...miniBtn, fontSize: 14, padding: "10px 0" }}>📊 數值面板</button>
-              <button onClick={onOpenDex} style={{ ...miniBtn, fontSize: 14, padding: "10px 0" }}>👾 敵人圖鑑</button>
-              <button onClick={onOpenSettings} style={{ ...miniBtn, fontSize: 14, padding: "10px 0" }}>⚙ 設定</button>
-              <button onClick={onMenu} style={{ ...miniBtn, fontSize: 14, padding: "10px 0" }}>↩ 主選單</button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 9, width: 210 }}>
+              <button onClick={onPause} style={btn("primary", { width: "100%", fontSize: 15 })}>▶ 繼續</button>
+              <button onClick={onOpenStats} style={btn("secondary", { width: "100%" })}>📊 數值面板</button>
+              <button onClick={onOpenDex} style={btn("secondary", { width: "100%" })}>👾 敵人圖鑑</button>
+              <button onClick={onOpenSettings} style={btn("secondary", { width: "100%" })}>⚙ 設定</button>
+              <button onClick={onMenu} style={btn("secondary", { width: "100%" })}>↩ 主選單</button>
             </div>
           </div>
         )}
@@ -86,8 +86,8 @@ export default function GameScreen(props) {
               </div>
             )}
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={onRestart} style={{ ...miniBtn, fontSize: 14, padding: "10px 20px", background: "#0e7490", color: "#ecfeff", border: "1px solid #22d3ee" }}>↻ 再來一局</button>
-              <button onClick={onMenu} style={{ ...miniBtn, fontSize: 14, padding: "10px 20px" }}>主選單</button>
+              <button onClick={onRestart} style={btn("primary", { padding: "10px 22px" })}>↻ 再來一局</button>
+              <button onClick={onMenu} style={btn("secondary", { padding: "10px 22px" })}>主選單</button>
             </div>
           </div>
         )}

@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { DIFF } from "../data/difficulty.js";
 import { ENEMIES, ENEMY_DEX } from "../data/enemies.js";
 import { enemyStatsAt } from "../engine/stats.js";
-import { MONO, miniBtn } from "../styles.js";
+import { MONO, miniBtn, tabStyle } from "../styles.js";
 
 const r0 = (x) => Math.round(x);
 const r2 = (x) => x.toFixed(2);
@@ -19,7 +19,7 @@ export default function EnemyPanel({ initialWave = 1, initialDiff = "normal", pl
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
         {Object.keys(DIFF).map((dk) => (
-          <button key={dk} onClick={() => setDiffKey(dk)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", border: `1px solid ${diffKey === dk ? DIFF[dk].col : "#1e293b"}`, background: diffKey === dk ? DIFF[dk].col + "1f" : "rgba(15,23,42,0.5)", color: diffKey === dk ? DIFF[dk].col : "#64748b" }}>{DIFF[dk].name}</button>
+          <button key={dk} onClick={() => setDiffKey(dk)} style={tabStyle(diffKey === dk, DIFF[dk].col)}>{DIFF[dk].name}</button>
         ))}
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 10 }}>

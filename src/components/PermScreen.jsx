@@ -6,6 +6,7 @@ import Armory from "./Armory.jsx";
 import RelicShop from "./RelicShop.jsx";
 import { WEAPONS } from "../data/weapons.js";
 import { BASE_TREE, WEAPON_TREE, NODE_COL, unlockedWeapons } from "../data/skillTree.js";
+import { tabStyle, C } from "../styles.js";
 
 export default function PermScreen({ meta, diamonds, onBuyNode, onResetTree, onUnlock, onBuyBase, onBuyRelic, onEquip }) {
   const [tab, setTab] = useState("base");
@@ -19,7 +20,7 @@ export default function PermScreen({ meta, diamonds, onBuyNode, onResetTree, onU
     <div>
       <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
         {TABS.map(([k, label]) => (
-          <button key={k} onClick={() => setTab(k)} style={{ flex: 1, padding: "8px 0", borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: "pointer", border: `1px solid ${tab === k ? "#22d3ee" : "#1e293b"}`, background: tab === k ? "rgba(34,211,238,0.16)" : "rgba(15,23,42,0.5)", color: tab === k ? "#67e8f9" : "#64748b" }}>{label}</button>
+          <button key={k} onClick={() => setTab(k)} style={tabStyle(tab === k, C.cyan)}>{label}</button>
         ))}
       </div>
 
@@ -33,7 +34,7 @@ export default function PermScreen({ meta, diamonds, onBuyNode, onResetTree, onU
         <div>
           <div style={{ display: "flex", gap: 5, marginBottom: 8, overflowX: "auto" }}>
             {owned.map((wk) => (
-              <button key={wk} onClick={() => setWsub(wk)} style={{ flex: "1 0 auto", minWidth: 56, padding: "6px 8px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", border: `1px solid ${wsel === wk ? "#f87171" : "#1e293b"}`, background: wsel === wk ? "rgba(248,113,113,0.14)" : "rgba(15,23,42,0.5)", color: wsel === wk ? "#fca5a5" : "#64748b", display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+              <button key={wk} onClick={() => setWsub(wk)} style={tabStyle(wsel === wk, "#f87171", 64)}>
                 <Icon type={WEAPONS[wk].icon} size={14} color={wsel === wk ? "#fca5a5" : "#64748b"} />{WEAPONS[wk].name}
               </button>
             ))}

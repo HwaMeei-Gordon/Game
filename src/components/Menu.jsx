@@ -16,7 +16,7 @@ export default function Menu({ metaV, onStart, onPerm, onStats, onDex, onCodes, 
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 11, width: 250, margin: "0 auto" }}>
           <button onClick={onStart} style={menuBtn("#0e7490", "#22d3ee", "#ecfeff", true)}>▶ 開始遊戲</button>
-          <button onClick={onPerm} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>💎 技能地圖</button>
+          <button onClick={onPerm} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>💎 永久進度</button>
           <button onClick={onStats} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>📊 數值面板</button>
           <button onClick={onDex} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>👾 敵人圖鑑</button>
           <button onClick={onAch} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>🏆 成就</button>
