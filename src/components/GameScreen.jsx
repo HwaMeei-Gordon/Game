@@ -24,7 +24,7 @@ export default function GameScreen(props) {
 
   return (
     <>
-      <Hud hud={hud} diamonds={diamonds} paused={paused} onMenu={onMenu} onPause={onPause} onStats={onOpenStats} onDex={onOpenDex} />
+      <Hud hud={hud} diamonds={diamonds} paused={paused} onMenu={onMenu} onPause={onPause} />
 
       <div ref={wrapRef} style={{ flex: "1 1 auto", minHeight: 0, position: "relative", touchAction: "none" }}>
         <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
@@ -37,11 +37,14 @@ export default function GameScreen(props) {
           </div>
         )}
         {paused && !hud.gameOver && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", gap: 14, alignItems: "center", justifyContent: "center", background: "rgba(4,6,10,0.55)" }}>
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", gap: 12, alignItems: "center", justifyContent: "center", background: "rgba(4,6,10,0.7)", backdropFilter: "blur(2px)" }}>
             <span style={{ fontFamily: MONO, fontSize: 22, color: "#67e8f9", letterSpacing: 2 }}>⏸ 已暫停</span>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={onPause} style={{ ...miniBtn, fontSize: 14, padding: "9px 18px", background: "#0e7490", color: "#ecfeff", border: "1px solid #22d3ee" }}>▶ 繼續</button>
-              <button onClick={onOpenSettings} style={{ ...miniBtn, fontSize: 14, padding: "9px 18px" }}>⚙ 設定</button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 9, width: 200 }}>
+              <button onClick={onPause} style={{ ...miniBtn, fontSize: 15, padding: "11px 0", background: "#0e7490", color: "#ecfeff", border: "1px solid #22d3ee" }}>▶ 繼續</button>
+              <button onClick={onOpenStats} style={{ ...miniBtn, fontSize: 14, padding: "10px 0" }}>📊 數值面板</button>
+              <button onClick={onOpenDex} style={{ ...miniBtn, fontSize: 14, padding: "10px 0" }}>👾 敵人圖鑑</button>
+              <button onClick={onOpenSettings} style={{ ...miniBtn, fontSize: 14, padding: "10px 0" }}>⚙ 設定</button>
+              <button onClick={onMenu} style={{ ...miniBtn, fontSize: 14, padding: "10px 0" }}>↩ 主選單</button>
             </div>
           </div>
         )}
