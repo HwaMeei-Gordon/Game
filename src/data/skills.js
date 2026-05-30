@@ -59,7 +59,7 @@ export function cloneSkill(s) {
   return { global: { ...s.global }, weapons };
 }
 
-export const CLASS_MULT = 1.01;
+export const CLASS_MULT = 1.008;
 export function attackTotal(skill) {
   let t = 0; for (const wk in skill.weapons) { const v = skill.weapons[wk]; for (const k in v) t += v[k] || 0; } return t;
 }
