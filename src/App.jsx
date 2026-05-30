@@ -117,6 +117,8 @@ export default function App() {
     window.addEventListener("pointerdown", unlock);
     return () => window.removeEventListener("pointerdown", unlock);
   }, []);
+  // 配樂段落：選單放選單曲，進遊戲放戰鬥曲（首領出現時於迴圈切換）。
+  useEffect(() => { audio.setTrack(screen === "playing" ? "battle" : "menu"); }, [screen]);
 
   const recompute = () => { statsRef.current = derive(metaRef.current, skillRef.current); };
   function syncHp() { const g = game.current; if (!g) return; const nm = statsRef.current.maxHp, d = nm - g.maxHp; g.maxHp = nm; g.hp = Math.min(nm, g.hp + Math.max(0, d)); }
@@ -237,6 +239,7 @@ export default function App() {
         acc = 0;
         setHud({ gold: Math.floor(g.gold), wave: g.wave, hp: Math.ceil(g.hp), maxHp: Math.round(g.maxHp), gameOver: g.gameOver, diff: g.diffKey, mode: g.mode, timeLeft: g.survivalTime, kills: g.kills });
         setCds({ ...g.cds });
+        audio.setTrack(g.enemies.some((e) => e.type === "boss") ? "boss" : "battle"); // 首領在場時切首領曲
         if (metaRef.current.diamonds !== lastDia.current) { lastDia.current = metaRef.current.diamonds; commitMeta(); }
         if (g.gameOver && !wasOver.current) {
           wasOver.current = true;

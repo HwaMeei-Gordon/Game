@@ -47,20 +47,40 @@ const SFX = {
 
 export function play(name) { if (!sfxOn || !unlocked) return; const f = SFX[name]; if (f) try { f(); } catch {} }
 
-// ── 背景音樂：16 步循環的 chiptune（旋律 + 低音）──
-const MEL  = [523, 659, 784, 659, 587, 659, 784, 988, 880, 784, 659, 587, 523, 587, 659, 784];
-const BASS = [131, 0, 196, 0, 165, 0, 196, 0, 147, 0, 175, 0, 131, 0, 196, 0];
-const STEP_MS = 150;
+// ── 背景音樂：依情境切換三段 16 步 chiptune ──
+const TRACKS = {
+  // 選單：和緩、稀疏
+  menu:   { step: 210, melVol: 0.09, bassVol: 0.14,
+    mel:  [523, 0, 659, 0, 587, 0, 494, 0, 440, 0, 523, 0, 587, 0, 0, 0],
+    bass: [131, 0, 0, 0, 165, 0, 0, 0, 147, 0, 0, 0, 131, 0, 0, 0] },
+  // 戰鬥：中速、有推進感
+  battle: { step: 150, melVol: 0.10, bassVol: 0.16,
+    mel:  [523, 659, 784, 659, 587, 659, 784, 988, 880, 784, 659, 587, 523, 587, 659, 784],
+    bass: [131, 0, 196, 0, 165, 0, 196, 0, 147, 0, 175, 0, 131, 0, 196, 0] },
+  // 首領：快、低沉、驅動
+  boss:   { step: 122, melVol: 0.11, bassVol: 0.18,
+    mel:  [330, 392, 330, 294, 330, 392, 440, 392, 330, 294, 262, 294, 330, 392, 330, 247],
+    bass: [98, 98, 98, 98, 110, 110, 110, 110, 87, 87, 87, 87, 98, 98, 98, 98] },
+};
+let track = "menu";
 
 function bgmTick() {
   if (!bgmOn || !unlocked) return;
-  const m = MEL[bgmStep % 16], b = BASS[bgmStep % 16];
-  if (m) blip(m, 0.13, "square", 0.1);
-  if (b) blip(b, 0.17, "triangle", 0.16);
+  const t = TRACKS[track] || TRACKS.battle;
+  const m = t.mel[bgmStep % 16], b = t.bass[bgmStep % 16];
+  if (m) blip(m, 0.13, "square", t.melVol);
+  if (b) blip(b, 0.17, "triangle", t.bassVol);
   bgmStep++;
 }
-function startBgm() { if (bgmTimer || !unlocked) return; bgmStep = 0; bgmTimer = setInterval(bgmTick, STEP_MS); }
+function startBgm() { if (bgmTimer || !unlocked) return; bgmStep = 0; bgmTimer = setInterval(bgmTick, (TRACKS[track] || TRACKS.battle).step); }
 function stopBgm() { if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; } }
+
+// 切換配樂段落（menu / battle / boss）；不同段落速度不同，故重啟計時器。
+export function setTrack(key) {
+  if (!TRACKS[key] || key === track) return;
+  track = key;
+  if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = setInterval(bgmTick, TRACKS[track].step); }
+}
 
 export function resume() {
   ensure();
