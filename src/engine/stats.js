@@ -88,6 +88,6 @@ export function enemyStatsAt(type, wave, diff) {
   const hpS = Math.pow(CFG.hpScaleBase, wave - 1) * diff.ehp;
   const atkS = Math.pow(CFG.atkScaleBase, wave - 1) * diff.edmg;
   const defS = Math.pow(CFG.defScaleBase, wave - 1);
-  const spdS = Math.pow(CFG.spdScaleBase, wave - 1);
+  const spdS = Math.min(CFG.spdScaleCap, Math.pow(CFG.spdScaleBase, wave - 1)); // 與實戰一致：移速成長有上限
   return { hp: t.hp * hpS, atk: t.atk * atkS, def: t.def * defS, spd: t.spd * spdS };
 }
