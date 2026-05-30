@@ -48,7 +48,7 @@ export function stepGame(g, s, dt, weapons, io) {
       g.waveActive = false; g.cooldown = 1.4; g.sounds.push("wave");
       io.reportWave(g.wave);
       g.gold += Math.floor((CFG.waveGoldBase + g.wave * CFG.waveGoldSlope) * g.diff.gold * s.goldMult);
-      if (g.wave % 5 === 0) { const gem = Math.floor(4 * g.diff.gem * s.gemYield); io.addDiamonds(gem); g.runGems += gem; }
+      if (g.wave % 5 === 0) { const gem = Math.floor(6 * g.diff.gem * s.gemYield); io.addDiamonds(gem); g.runGems += gem; }
     }
     if (!g.waveActive) { g.cooldown -= dt; if (g.cooldown <= 0) startWave(g, g.wave + 1); }
   }
@@ -221,10 +221,10 @@ function endRun(g, s, io) {
   g.sounds.push("gameover");
   if (g.mode === "survival") {
     io.reportSurvival(g.kills);
-    const gem = Math.floor(g.kills * 0.4 * s.gemYield * g.diff.gem); io.addDiamonds(gem); g.runGems += gem;
+    const gem = Math.floor(g.kills * 0.5 * s.gemYield * g.diff.gem); io.addDiamonds(gem); g.runGems += gem;
   } else {
     io.reportWave(g.wave);
-    const gem = Math.floor(g.wave * 2 * s.gemYield * g.diff.gem); io.addDiamonds(gem); g.runGems += gem;
+    const gem = Math.floor(g.wave * 3 * s.gemYield * g.diff.gem); io.addDiamonds(gem); g.runGems += gem;
   }
 }
 

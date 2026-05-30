@@ -18,11 +18,12 @@ export function derive(meta, skill) {
   const dmgM = 1 + Bg("dmgM");
   const hpM = Math.max(0.3, 1 + Bg("hpM"));
   const gl = (skill && skill.global) || {};
+  const glass = !!(relic && relic.flag === "glass"); // 玻璃大砲：護甲歸零
 
   const out = {
     maxHp: (100 + (gl.hp || 0) * 30) * hpM,
     regen: (gl.regen || 0) * 1.4 + Bg("regen") + CFG.baseRegen,
-    armor: (gl.armor || 0) * 1.5 + Bg("armor"),
+    armor: glass ? 0 : (gl.armor || 0) * 1.5 + Bg("armor"),
     rangeBonus: 0,
     rangeFlat: Bg("rangeFlat"),
     critChance: Bg("critC"),
@@ -32,9 +33,9 @@ export function derive(meta, skill) {
     goldMult: 1 + Bg("goldM"),
     lifesteal: Bg("lifesteal"),
     takeDmgMult: 1 + Bg("takeDmg"),
-    glass: false,
-    fortress: false,
-    immortal: relic && relic.flag === "immortal",
+    glass,
+    fortress: !!(relic && relic.flag === "fortress"),
+    immortal: !!(relic && relic.flag === "immortal"),
     weapons: {},
   };
 

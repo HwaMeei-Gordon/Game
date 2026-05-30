@@ -11,4 +11,8 @@ export const RELICS = {
   bramble:  { name: "荊棘核心", icon: "thorns", cost: 250, bonus: { thorns: 14 }, desc: "近身荊棘灼燒 +14/s" },
   orbit:    { name: "軌道核心", icon: "orb",    cost: 320, bonus: { orbs: 2 }, desc: "+2 顆軌道無人機" },
   phoenix:  { name: "不死核心", icon: "regen",  cost: 360, bonus: { hpM: 0.10 }, flag: "immortal", desc: "每波免死一次（回復 35% 生命）" },
+  bloodlust:{ name: "嗜血核心", icon: "regen",  cost: 300, bonus: { lifesteal: 0.06 }, desc: "每次擊殺回復少量生命" },
+  berserk:  { name: "狂戰核心", icon: "dmg",    cost: 340, bonus: { dmgM: 0.55 }, flag: "glass", desc: "傷害 +55%，但護甲歸零（玻璃大砲）" },
+  fortress: { name: "要塞核心", icon: "armor",  cost: 340, bonus: { hpM: 0.15 }, flag: "fortress", desc: "生命低於 30% 時，傷害減免大幅提升" },
+  greed:    { name: "貪婪核心", icon: "gold",   cost: 280, bonus: { goldM: 0.70, takeDmg: 0.25 }, desc: "金幣 +70%，但承受傷害 +25%（高風險高報酬）" },
 };

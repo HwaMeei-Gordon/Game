@@ -3,9 +3,9 @@
 
 // 波次成長：每往後一波，敵人屬性以下列底數做指數成長。
 export const CFG = {
-  hpScaleBase: 1.16,   // 血量成長
+  hpScaleBase: 1.15,   // 血量成長（略放緩，讓玩家升級更跟得上、曲線更順）
   atkScaleBase: 1.07,  // 攻擊成長
-  defScaleBase: 1.04,  // 防禦成長
+  defScaleBase: 1.035, // 防禦成長（略放緩，避免後期武器被護甲完全擋住）
   spdScaleBase: 1.012, // 移動速度成長（微幅）
   spdScaleCap: 1.9,    // 移速成長上限（避免後期快到無法反應）
   baseRegen: 1.0,      // 塔的基礎回血
