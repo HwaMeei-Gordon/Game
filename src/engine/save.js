@@ -10,6 +10,7 @@ export function encodeSave(meta) {
     d: meta.diamonds | 0, bw: meta.bestWave | 0, bk: meta.bestKills | 0,
     n: meta.nodes || {}, w: meta.weaponsOwned || {}, wb: meta.weaponBase || {},
     ro: meta.relicsOwned || {}, re: meta.relicEquipped || null,
+    st: meta.stats || { kills: 0, runs: 0 }, ac: meta.ach || {},
   });
   const b = b64encode(j);
   let sum = 0; for (let i = 0; i < b.length; i++) sum += b.charCodeAt(i);
@@ -29,6 +30,7 @@ export function decodeSave(str) {
       diamonds: j.d | 0, bestWave: j.bw || 1, bestKills: j.bk | 0,
       nodes: j.n || {}, weaponsOwned: j.w || {}, weaponBase: j.wb || {},
       relicsOwned: j.ro || {}, relicEquipped: j.re || null,
+      stats: j.st || { kills: 0, runs: 0 }, ach: j.ac || {},
     };
   } catch { return null; }
 }

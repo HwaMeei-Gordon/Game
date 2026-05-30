@@ -2,7 +2,7 @@
 import React from "react";
 import { menuBtn, MONO } from "../styles.js";
 
-export default function Menu({ metaV, onStart, onPerm, onStats, onDex, onCodes, onSettings, onHelp }) {
+export default function Menu({ metaV, onStart, onPerm, onStats, onDex, onCodes, onSettings, onHelp, onAch }) {
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 35%, rgba(34,211,238,0.14), transparent 60%)" }} />
@@ -19,6 +19,7 @@ export default function Menu({ metaV, onStart, onPerm, onStats, onDex, onCodes, 
           <button onClick={onPerm} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>💎 技能地圖</button>
           <button onClick={onStats} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>📊 數值面板</button>
           <button onClick={onDex} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>👾 敵人圖鑑</button>
+          <button onClick={onAch} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>🏆 成就</button>
           <button onClick={onCodes} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>💾 進度代碼</button>
           <button onClick={onSettings} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>⚙ 設定</button>
           <button onClick={onHelp} style={menuBtn("rgba(15,23,42,0.7)", "#334155", "#cbd5e1")}>❔ 說明</button>

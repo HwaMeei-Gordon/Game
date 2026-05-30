@@ -13,7 +13,7 @@ const mmss = (t) => { const s = Math.max(0, Math.floor(t)); return `${Math.floor
 export default function GameScreen(props) {
   const {
     wrapRef, canvasRef, hud, diamonds, bestKills = 0, paused,
-    onMenu, onPause, onOpenStats, onOpenDex, onOpenSettings, onRestart, summary,
+    onMenu, onPause, onOpenStats, onOpenDex, onOpenSettings, onRestart, summary, achToast = [],
     tip, onAdvanceTip,
     unlocked, upTab, setUpTab, skill, onBuyUpgrade,
     speed = 1, onCycleSpeed,
@@ -68,6 +68,16 @@ export default function GameScreen(props) {
                     <div style={{ height: 6, background: "#0f172a", borderRadius: 3, overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${Math.max(2, w.pct * 100)}%`, background: "linear-gradient(90deg,#f43f5e,#fb923c)" }} />
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {achToast.length > 0 && (
+              <div style={{ width: "100%", maxWidth: 320, marginBottom: 12 }}>
+                {achToast.map((a) => (
+                  <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(251,191,36,0.14)", border: "1px solid #fbbf24", borderRadius: 9, padding: "7px 11px", marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, color: "#fcd34d", fontWeight: 700 }}>🏆 解鎖：{a.name}</span>
+                    <span style={{ fontSize: 12, color: "#67e8f9", fontFamily: MONO }}>+💎{a.reward}</span>
                   </div>
                 ))}
               </div>

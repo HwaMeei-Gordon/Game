@@ -20,6 +20,7 @@ export default function CodesOverlay({ metaRef, commitMeta, metaV, onClose }) {
     m.diamonds = r.diamonds; m.bestWave = r.bestWave; m.bestKills = r.bestKills || m.bestKills || 0;
     m.nodes = r.nodes || {}; m.weaponsOwned = r.weaponsOwned || {}; m.weaponBase = r.weaponBase || {};
     m.relicsOwned = r.relicsOwned || {}; m.relicEquipped = r.relicEquipped || null;
+    m.stats = r.stats || { kills: 0, runs: 0 }; m.ach = r.ach || {};
     commitMeta(); setMsg({ t: "ok", m: `讀取成功 · 💎${r.diamonds} · 最佳第${r.bestWave}波` });
   };
 

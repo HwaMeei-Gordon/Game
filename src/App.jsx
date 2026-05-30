@@ -11,6 +11,7 @@ import {
 import { RELICS } from "./data/relics.js";
 import { HEADSTART_OFFSET } from "./data/modes.js";
 import { TIPS } from "./data/tips.js";
+import { processAchievements } from "./data/achievements.js";
 import { derive } from "./engine/stats.js";
 import { legacyDecodeV3 } from "./engine/save.js";
 import { createRun, cumulativeWaveGold } from "./engine/game.js";
@@ -29,6 +30,7 @@ import EnemyPanel from "./components/EnemyPanel.jsx";
 import CodesOverlay from "./components/CodesOverlay.jsx";
 import Settings from "./components/Settings.jsx";
 import HelpOverlay from "./components/HelpOverlay.jsx";
+import AchievementsOverlay from "./components/AchievementsOverlay.jsx";
 
 const ONBOARD_KEY = "thetower_onboarded";
 
@@ -40,7 +42,7 @@ const META_KEY = "thetower_meta";
 const OLD_V3_KEY = "thetower_save_v3";
 const BESTKILLS_KEY = "thetower_bestkills";
 function createMeta() {
-  return { diamonds: 0, bestWave: 1, bestKills: 0, nodes: {}, weaponsOwned: {}, weaponBase: {}, relicsOwned: {}, relicEquipped: null };
+  return { diamonds: 0, bestWave: 1, bestKills: 0, nodes: {}, weaponsOwned: {}, weaponBase: {}, relicsOwned: {}, relicEquipped: null, stats: { kills: 0, runs: 0 }, ach: {} };
 }
 function loadMeta() {
   const m = createMeta();
@@ -51,6 +53,7 @@ function loadMeta() {
       m.diamonds = j.diamonds; m.bestWave = j.bestWave || 1; m.bestKills = j.bestKills || m.bestKills;
       m.nodes = j.nodes || {}; m.weaponsOwned = j.weaponsOwned || {}; m.weaponBase = j.weaponBase || {};
       m.relicsOwned = j.relicsOwned || {}; m.relicEquipped = j.relicEquipped || null;
+      m.stats = j.stats || m.stats; m.ach = j.ach || {};
       return m;
     }
   } catch {}
@@ -60,7 +63,8 @@ function loadMeta() {
 function snapMeta(m) {
   return { diamonds: m.diamonds, bestWave: m.bestWave, bestKills: m.bestKills || 0,
     nodes: { ...m.nodes }, weaponsOwned: { ...m.weaponsOwned }, weaponBase: JSON.parse(JSON.stringify(m.weaponBase || {})),
-    relicsOwned: { ...m.relicsOwned }, relicEquipped: m.relicEquipped || null };
+    relicsOwned: { ...m.relicsOwned }, relicEquipped: m.relicEquipped || null,
+    stats: { ...(m.stats || { kills: 0, runs: 0 }) }, ach: { ...(m.ach || {}) } };
 }
 
 export default function App() {
@@ -90,6 +94,7 @@ export default function App() {
   const [hud, setHud] = useState({ gold: 0, wave: 1, hp: 100, maxHp: 100, gameOver: false, diff: "normal", mode: "classic", timeLeft: 0, kills: 0 });
   const [cds, setCds] = useState({ over: 0, nova: 0, frost: 0, repair: 0 });
   const [summary, setSummary] = useState(null); // 結算畫面資料
+  const [achToast, setAchToast] = useState([]); // 本局新解鎖成就
   const [tipIdx, setTipIdx] = useState(-1); // 新手提示索引（-1 = 不顯示）
   const advanceTip = useCallback(() => {
     setTipIdx((i) => { const n = i + 1; if (n >= TIPS.length) { try { localStorage.setItem(ONBOARD_KEY, "1"); } catch {} return -1; } return n; });
@@ -130,7 +135,7 @@ export default function App() {
     else if (mode === "survival") opts.survivalStrength = Math.max(1, best);
     game.current = createRun(diffKey, statsRef.current, opts);
     cam.current.zoom = DEFAULT_ZOOM; lastDia.current = metaRef.current.diamonds; wasOver.current = false;
-    setSummary(null); setSkillV(cloneSkill(skillRef.current));
+    setSummary(null); setAchToast([]); setSkillV(cloneSkill(skillRef.current));
   }, []);
 
   // 局內升級
@@ -234,7 +239,9 @@ export default function App() {
         setCds({ ...g.cds });
         if (metaRef.current.diamonds !== lastDia.current) { lastDia.current = metaRef.current.diamonds; commitMeta(); }
         if (g.gameOver && !wasOver.current) {
-          wasOver.current = true; commitMeta();
+          wasOver.current = true;
+          const newly = processAchievements(metaRef.current, g.kills);
+          commitMeta(); setAchToast(newly);
           const wd = g.wdmg || {}, total = Object.values(wd).reduce((a, b) => a + b, 0) || 1;
           const weapons = Object.keys(wd).map((wk) => ({ wk, dmg: wd[wk], pct: wd[wk] / total })).sort((a, b) => b.dmg - a.dmg);
           setSummary({ wave: g.wave, kills: g.kills, time: g.t, gems: g.runGems || 0, mode: g.mode, weapons });
@@ -256,10 +263,10 @@ export default function App() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap');*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}button{font-family:inherit}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:3px}`}</style>
 
       {screen === "menu" ? (
-        <Menu metaV={metaV} onStart={() => setOverlay("start")} onPerm={() => setOverlay("perm")} onStats={() => setOverlay("stats")} onDex={() => setOverlay("dex")} onCodes={() => setOverlay("codes")} onSettings={() => setOverlay("settings")} onHelp={() => setOverlay("help")} />
+        <Menu metaV={metaV} onStart={() => setOverlay("start")} onPerm={() => setOverlay("perm")} onStats={() => setOverlay("stats")} onDex={() => setOverlay("dex")} onCodes={() => setOverlay("codes")} onSettings={() => setOverlay("settings")} onHelp={() => setOverlay("help")} onAch={() => setOverlay("ach")} />
       ) : (
         <GameScreen
-          wrapRef={wrapRef} canvasRef={canvasRef} hud={hud} diamonds={metaV.diamonds} bestKills={metaV.bestKills} paused={paused} summary={summary}
+          wrapRef={wrapRef} canvasRef={canvasRef} hud={hud} diamonds={metaV.diamonds} bestKills={metaV.bestKills} paused={paused} summary={summary} achToast={achToast}
           onMenu={toMenu} onPause={() => setPaused((p) => !p)} onOpenStats={() => setOverlay("stats")} onOpenDex={() => setOverlay("dex")} onOpenSettings={() => setOverlay("settings")} onRestart={restart}
           unlocked={uw} upTab={upTab} setUpTab={setUpTab} skill={skillV} onBuyUpgrade={buyUpgrade}
           speed={speed} onCycleSpeed={cycleSpeed}
@@ -283,6 +290,7 @@ export default function App() {
       {overlay === "codes" && <CodesOverlay metaRef={metaRef} commitMeta={commitMeta} metaV={metaV} onClose={() => setOverlay(null)} />}
       {overlay === "settings" && <Settings sfxOn={sfxOn} bgmOn={bgmOn} onToggleSfx={toggleSfx} onToggleBgm={toggleBgm} onClose={() => setOverlay(null)} />}
       {overlay === "help" && <HelpOverlay onClose={() => setOverlay(null)} />}
+      {overlay === "ach" && <AchievementsOverlay meta={metaV} onClose={() => setOverlay(null)} />}
     </div>
   );
 }
