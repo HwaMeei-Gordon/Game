@@ -14,7 +14,7 @@ export function createRun(diffKey, stats, opts = {}) {
     gold: opts.startGold ?? 50, maxHp: stats.maxHp, hp: stats.maxHp,
     diff: DIFF[diffKey], diffKey, mode,
     wave: 1, waveActive: true, spawnQueue: 0, spawnTimer: 0, cooldown: 0, immortalUsed: false,
-    enemies: [], bullets: [], beams: [], particles: [], fx: [],
+    enemies: [], bullets: [], ebullets: [], beams: [], particles: [], fx: [],
     eid: 0, fireCd: {}, orbAngle: 0,
     buffs: { over: 0, frost: 0 },
     cds: { over: 0, nova: 0, frost: 0, repair: 0 },

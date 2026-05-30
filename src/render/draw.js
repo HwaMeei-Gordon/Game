@@ -79,10 +79,18 @@ export function draw(ctx, g, s, d, camera, weapons) {
   }
   ctx.globalAlpha = 1;
 
+  // 敵方子彈（射手）
+  if (g.ebullets) for (const eb of g.ebullets) {
+    const bx = X(eb.x), by = Y(eb.y); if (bx < -20 || bx > w + 20 || by < -20 || by > h + 20) continue;
+    ctx.fillStyle = "#fb7185"; ctx.beginPath(); ctx.arc(bx, by, L(0.016), 0, 6.2832); ctx.fill();
+    ctx.strokeStyle = "rgba(251,113,133,0.45)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(bx, by, L(0.016) + 2, 0, 6.2832); ctx.stroke();
+  }
+
   // 敵人（徑向漸層球體 + 高光；視窗外略過、不用 shadowBlur）
   for (const e of g.enemies) {
     const ex = X(e.x), ey = Y(e.y), er = L(e.r);
     if (ex < -40 || ex > w + 40 || ey < -40 || ey > h + 40) continue;
+    if (e.trait === "healer") { ctx.strokeStyle = "rgba(52,211,153,0.35)"; ctx.lineWidth = 1.4; ctx.setLineDash([4, 5]); ctx.beginPath(); ctx.arc(ex, ey, L(0.6), 0, 6.2832); ctx.stroke(); ctx.setLineDash([]); }
     const eg = ctx.createRadialGradient(ex - er * 0.3, ey - er * 0.3, er * 0.1, ex, ey, er);
     eg.addColorStop(0, "#ffffff"); eg.addColorStop(0.35, e.col); eg.addColorStop(1, shade(e.col, -0.35));
     ctx.fillStyle = eg; drawShape(ctx, e.shape, ex, ey, er, e.rot); ctx.fill();

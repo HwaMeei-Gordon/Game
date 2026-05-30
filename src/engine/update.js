@@ -62,7 +62,16 @@ export function stepGame(g, s, dt, weapons, io) {
     if (e.maxShield > 0 && e.shield < e.maxShield) e.shield = Math.min(e.maxShield, e.shield + e.maxShield * 0.04 * dt);
     // 冰霜（全域）+ 火焰減速（個別、短時）
     const slow = frost * (e.slowUntil > g.t ? (1 - (e.slowF || 0)) : 1);
-    if (dist > rim) {
+    if (e.move === "kite") {
+      // 射手：逼近到 shootRange 後停下，朝塔連續射擊
+      if (dist > WORLD.shootRange) { const v = e.sr * spdScale * slow; e.x -= (e.x / dist) * v * dt; e.y -= (e.y / dist) * v * dt; }
+      e.shootCd = (e.shootCd == null ? 1.2 : e.shootCd) - dt * slow;
+      if (e.shootCd <= 0 && dist <= WORLD.shootRange + 0.4) {
+        e.shootCd = 1.6;
+        const a = Math.atan2(-e.y, -e.x);
+        g.ebullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * WORLD.eBulletSpd, vy: Math.sin(a) * WORLD.eBulletSpd, dmg: e.atk, life: 7 });
+      }
+    } else if (dist > rim) {
       if (e.move === "weave") {
         const inward = e.sr * spdScale * slow, ang = Math.atan2(e.y, e.x);
         const ndist = dist - inward * dt, na = ang + e.weaveDir * (e.sr * 1.5 / Math.max(dist, 0.15)) * dt;
@@ -72,6 +81,15 @@ export function stepGame(g, s, dt, weapons, io) {
         const v = e.sr * spdScale * slow * burstF; e.x -= (e.x / dist) * v * dt; e.y -= (e.y / dist) * v * dt;
       } else {
         const v = e.sr * spdScale * slow; e.x -= (e.x / dist) * v * dt; e.y -= (e.y / dist) * v * dt;
+      }
+    }
+    // 治療者：定期治療周圍敵人
+    if (e.trait === "healer") {
+      e.healCd = (e.healCd == null ? 2 : e.healCd) - dt;
+      if (e.healCd <= 0) {
+        e.healCd = 2;
+        for (const o of g.enemies) { if (o !== e) { const dd = (o.x - e.x) ** 2 + (o.y - e.y) ** 2; if (dd < 0.6 * 0.6) o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.06); } }
+        burst(g, e.x, e.y, "#34d399", 5);
       }
     }
     if (s.thorns > 0 && dist < rim + WORLD.thornsBand) { damageEnemy(e, s.thorns * dt); if (Math.random() < 0.25) burst(g, e.x, e.y, "#fcd34d", 1); }
@@ -88,6 +106,22 @@ export function stepGame(g, s, dt, weapons, io) {
       }
       continue;
     }
+  }
+
+  // 敵方子彈（射手）→ 命中塔扣血
+  for (let i = g.ebullets.length - 1; i >= 0; i--) {
+    const eb = g.ebullets[i]; eb.x += eb.vx * dt; eb.y += eb.vy * dt; eb.life -= dt;
+    if (Math.hypot(eb.x, eb.y) < WORLD.tower + 0.05) {
+      let armor = s.armor; if (s.fortress && g.hp < g.maxHp * 0.3) armor += 45;
+      g.hp -= Math.max(1, eb.dmg - armor) * s.takeDmgMult; g.sounds.push("hurt");
+      ringFx(g, 0, 0, "#fb7185", WORLD.tower * 1.8, 0.18); g.ebullets.splice(i, 1);
+      if (g.hp <= 0) {
+        if (s.immortal && !g.immortalUsed) { g.hp = g.maxHp * 0.35; g.immortalUsed = true; ringFx(g, 0, 0, "#4ade80", WORLD.tower * 5, 0.5); burst(g, 0, 0, "#4ade80", 22); }
+        else { g.hp = 0; endRun(g, s, io); }
+      }
+      continue;
+    }
+    if (eb.life <= 0) g.ebullets.splice(i, 1);
   }
 
   // 軌道無人機

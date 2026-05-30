@@ -17,22 +17,26 @@ export const ENEMIES = {
   splitter: { name: "分裂體", shape: "diamond",  hp: 16, spd: 0.13,  atk: 6,   def: 2,  r: 0.093, rw: 14, col: "#f0abfc", move: "straight", trait: "split",  info: "死亡時裂成兩隻碎片，清群武器要小心被淹沒。" },
   scout:    { name: "斥候",   shape: "pentagon", hp: 8,  spd: 0.27,  atk: 7,   def: 1,  r: 0.072, rw: 13, col: "#fde047", move: "straight", trait: null,    info: "五角形高速兵，血薄但逼近極快，別讓它溜到核心。" },
   colossus: { name: "巨像",   shape: "octagon",  hp: 55, spd: 0.060, atk: 14,  def: 8,  r: 0.132, rw: 30, col: "#94a3b8", move: "straight", trait: null,    info: "八角形重型單位，血厚防高、移動緩慢，中後期的硬骨頭。" },
+  shooter:  { name: "射手",   shape: "heptagon", hp: 15, spd: 0.140, atk: 9,   def: 2,  r: 0.085, rw: 20, col: "#fb7185", move: "kite",     trait: "shooter",info: "保持距離朝塔連續射擊，不近身。需要遠程武器或射程升級才打得到。" },
+  healer:   { name: "治療者", shape: "cross",    hp: 22, spd: 0.100, atk: 5,   def: 2,  r: 0.090, rw: 24, col: "#10b981", move: "straight", trait: "healer", info: "定期治療周圍敵人，會讓敵群更難清，建議優先擊殺。" },
   boss:     { name: "首領",   shape: "hexagon",  hp: 70, spd: 0.086, atk: 16,  def: 10, r: 0.147, rw: 34, col: "#f43f5e", move: "straight", trait: "boss",   info: "每 5 波出現一次，高血高防高攻。" },
   mini:     { name: "碎片",   shape: "circle",   hp: 5,  spd: 0.24,  atk: 4,   def: 0,  r: 0.050, rw: 4,  col: "#6ee7b7", move: "straight", trait: null,     info: "分裂體死亡後產生的小型敵人。" },
 };
 
 // 玩家可在敵人面板查看的種類（不含 mini，因為它是衍生物）。
-export const ENEMY_DEX = ["grunt", "scout", "dasher", "brute", "weaver", "warden", "splitter", "colossus", "boss"];
+export const ENEMY_DEX = ["grunt", "scout", "dasher", "brute", "weaver", "warden", "splitter", "shooter", "healer", "colossus", "boss"];
 
 // 依波次決定生成哪種敵人（隨機 roll）。
 export function pickType(n) {
   const roll = Math.random();
-  if (n >= 11 && roll < 0.08) return "colossus";
-  if (n >= 4 && roll < 0.20) return "brute";
-  if (n >= 6 && roll < 0.32) return "dasher";
-  if (n >= 5 && roll < 0.44) return "splitter";
-  if (n >= 7 && roll < 0.56) return "weaver";
-  if (n >= 9 && roll < 0.66) return "warden";
-  if (n >= 3 && roll < 0.80) return "scout";
+  if (n >= 11 && roll < 0.07) return "colossus";
+  if (n >= 12 && roll < 0.14) return "healer";
+  if (n >= 8 && roll < 0.24) return "shooter";
+  if (n >= 4 && roll < 0.34) return "brute";
+  if (n >= 6 && roll < 0.45) return "dasher";
+  if (n >= 5 && roll < 0.55) return "splitter";
+  if (n >= 7 && roll < 0.65) return "weaver";
+  if (n >= 9 && roll < 0.73) return "warden";
+  if (n >= 3 && roll < 0.85) return "scout";
   return "grunt";
 }

@@ -32,6 +32,8 @@ export const WORLD = {
   thornsBand: 0.16,   // 荊棘灼燒生效的環帶寬度
   flameRange: 0.85,   // 火焰射程
   splashR: 0.26,      // 濺射半徑
+  shootRange: 1.4,    // 射手保持的距離（在此停下朝塔射擊）
+  eBulletSpd: 1.1,    // 敵方子彈速度
   viewDiv: 4.2,       // 視野除數：越大畫面看到的範圍越廣（讓整個生成環可見）
 };
 
