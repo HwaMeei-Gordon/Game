@@ -121,6 +121,7 @@ export function chainHit(g, s, b, first) {
 
 // ── 視覺效果（資料層，畫面層負責繪製） ──
 export function burst(g, x, y, col, n) {
+  if (g.particles.length > 280) return; // 上限，避免高倍速時爆量拖慢
   for (let i = 0; i < n; i++) {
     const a = Math.random() * 6.28, sp = 0.12 + Math.random() * 0.45;
     g.particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.5, maxLife: 0.5, col, r: 0.012 + Math.random() * 0.01 });

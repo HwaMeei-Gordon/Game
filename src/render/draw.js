@@ -70,21 +70,22 @@ export function draw(ctx, g, s, d, camera, weapons) {
     ctx.beginPath(); ctx.moveTo(X(bm.x1), Y(bm.y1)); ctx.lineTo(X(bm.x2), Y(bm.y2)); ctx.stroke(); ctx.restore();
   }
 
-  // 子彈（光暈＋拖尾）
+  // 子彈（拖尾 + 亮點；視窗外略過、不用 shadowBlur 省效能）
   for (const b of g.bullets) {
-    ctx.save(); const c = b.type === "homing" ? "#fbbf24" : b.crit ? "#fff" : "#fde68a";
+    const bx = X(b.x), by = Y(b.y); if (bx < -20 || bx > w + 20 || by < -20 || by > h + 20) continue;
+    const c = b.type === "homing" ? "#fbbf24" : b.crit ? "#fff" : "#fde68a";
     ctx.globalAlpha = 0.35; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(X(b.x - b.vx * 0.025), Y(b.y - b.vy * 0.025), L(0.012), 0, 6.2832); ctx.fill();
-    ctx.globalAlpha = 1; ctx.shadowBlur = 8; ctx.shadowColor = c; ctx.fillStyle = c;
-    ctx.beginPath(); ctx.arc(X(b.x), Y(b.y), L(b.crit ? 0.02 : 0.016), 0, 6.2832); ctx.fill(); ctx.restore();
+    ctx.globalAlpha = 1; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(bx, by, L(b.crit ? 0.02 : 0.016), 0, 6.2832); ctx.fill();
   }
+  ctx.globalAlpha = 1;
 
-  // 敵人（徑向漸層球體＋外發光＋高光）
+  // 敵人（徑向漸層球體 + 高光；視窗外略過、不用 shadowBlur）
   for (const e of g.enemies) {
     const ex = X(e.x), ey = Y(e.y), er = L(e.r);
-    ctx.save(); ctx.shadowBlur = 14; ctx.shadowColor = e.col;
+    if (ex < -40 || ex > w + 40 || ey < -40 || ey > h + 40) continue;
     const eg = ctx.createRadialGradient(ex - er * 0.3, ey - er * 0.3, er * 0.1, ex, ey, er);
     eg.addColorStop(0, "#ffffff"); eg.addColorStop(0.35, e.col); eg.addColorStop(1, shade(e.col, -0.35));
-    ctx.fillStyle = eg; drawShape(ctx, e.shape, ex, ey, er, e.rot); ctx.fill(); ctx.restore();
+    ctx.fillStyle = eg; drawShape(ctx, e.shape, ex, ey, er, e.rot); ctx.fill();
     ctx.lineWidth = 1.4; ctx.strokeStyle = "rgba(255,255,255,0.5)"; drawShape(ctx, e.shape, ex, ey, er, e.rot); ctx.stroke();
     if (e.shield > 0) { ctx.strokeStyle = "rgba(125,211,252,0.9)"; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(ex, ey, er + 5, -1.57, -1.57 + 6.2832 * (e.shield / e.maxShield)); ctx.stroke(); }
     if (e.hp < e.maxHp) {
@@ -96,17 +97,19 @@ export function draw(ctx, g, s, d, camera, weapons) {
   // 軌道無人機
   if (s.orbs > 0) for (let o = 0; o < s.orbs; o++) {
     const a = g.orbAngle + o * 6.2832 / s.orbs, ox = X(Math.cos(a) * WORLD.orbR), oy = Y(Math.sin(a) * WORLD.orbR);
-    ctx.save(); ctx.shadowBlur = 9; ctx.shadowColor = "#a5f3fc"; ctx.fillStyle = "#cffafe"; ctx.beginPath(); ctx.arc(ox, oy, L(0.022), 0, 6.2832); ctx.fill(); ctx.restore();
+    ctx.fillStyle = "#cffafe"; ctx.beginPath(); ctx.arc(ox, oy, L(0.022), 0, 6.2832); ctx.fill();
   }
 
   // 浮動傷害數字 / 擊殺金幣跳字
-  if (g.texts) for (const tx of g.texts) {
-    ctx.save(); ctx.globalAlpha = Math.max(0, tx.life / tx.maxLife);
-    ctx.fillStyle = tx.col; ctx.font = `700 ${tx.big ? 15 : 12}px 'Rajdhani','Noto Sans TC',sans-serif`;
-    ctx.textAlign = "center"; ctx.shadowBlur = 4; ctx.shadowColor = "rgba(0,0,0,0.85)";
-    ctx.fillText(tx.str, X(tx.x), Y(tx.y)); ctx.restore();
+  if (g.texts) { ctx.textAlign = "center"; ctx.lineWidth = 2.5; ctx.strokeStyle = "rgba(0,0,0,0.7)";
+    for (const tx of g.texts) {
+      const px = X(tx.x), py = Y(tx.y); if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
+      ctx.globalAlpha = Math.max(0, tx.life / tx.maxLife);
+      ctx.font = `700 ${tx.big ? 15 : 12}px 'Rajdhani','Noto Sans TC',sans-serif`;
+      ctx.strokeText(tx.str, px, py); ctx.fillStyle = tx.col; ctx.fillText(tx.str, px, py);
+    }
+    ctx.globalAlpha = 1;
   }
-  ctx.globalAlpha = 1;
 
   // 塔（旋轉護環 + 漸層核心 + 光暈 + 脈動）
   const TR = L(WORLD.tower);
