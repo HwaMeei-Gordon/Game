@@ -18,7 +18,7 @@ export function createRun(diffKey, stats, opts = {}) {
     eid: 0, fireCd: {}, orbAngle: 0,
     buffs: { over: 0, frost: 0 },
     cds: { over: 0, nova: 0, frost: 0, repair: 0 },
-    gameOver: false, t: 0,
+    gameOver: false, t: 0, shake: 0,
     kills: 0, sounds: [], texts: [], wdmg: {}, runGems: 0,
     survivalTime: mode === "survival" ? SURVIVAL_SECONDS : 0,
     survivalStrength: Math.max(1, opts.survivalStrength || 1),
@@ -133,6 +133,9 @@ export function ringFx(g, x, y, col, r, life) {
 }
 // 累計各武器造成的傷害（給結算畫面算佔比）。
 export function tagDmg(g, wk, amount) { if (!g.wdmg) g.wdmg = {}; g.wdmg[wk] = (g.wdmg[wk] || 0) + amount; }
+
+// 螢幕震動（取較大值，於 update 衰退、draw 套用）。
+export function addShake(g, amt) { g.shake = Math.max(g.shake || 0, amt); }
 
 // 浮動文字（傷害數字、擊殺金幣跳字）。
 export function floatText(g, x, y, str, col, big) {

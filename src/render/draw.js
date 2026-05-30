@@ -5,17 +5,34 @@ import { WORLD } from "../data/tuning.js";
 import { drawShape } from "./shapes.js";
 import { rangeOf } from "../engine/update.js";
 
+// 背景星空（單次生成，normalized 座標 + 微弱漂移/閃爍）。
+const STARS = [];
+for (let i = 0; i < 70; i++) STARS.push({ x: Math.random(), y: Math.random(), r: 0.5 + Math.random() * 1.3, ph: Math.random() * 6.28, sp: 0.4 + Math.random() * 1.2, dx: (Math.random() - 0.5) * 0.004 });
+
 export function draw(ctx, g, s, d, camera, weapons) {
-  const { w, h, cx, cy, base } = d, z = camera.zoom, sc = base * z;
+  const { w, h, base } = d, z = camera.zoom, sc = base * z;
+  // 螢幕震動：整個畫面以隨機小位移呈現
+  const sh = Math.min(g.shake || 0, 16);
+  const cx = d.cx + (sh ? (Math.random() - 0.5) * sh : 0), cy = d.cy + (sh ? (Math.random() - 0.5) * sh : 0);
   const X = (wx) => cx + wx * sc, Y = (wy) => cy + wy * sc, L = (v) => v * sc;
   // 攻擊圈以「已啟用武器中最遠射程」為準
   let range = rangeOf(s);
-  if (Array.isArray(weapons) && s.weapons) for (const wk of weapons) { const w = s.weapons[wk]; if (w && wk !== "flame" && w.range > range) range = w.range; }
+  if (Array.isArray(weapons) && s.weapons) for (const wk of weapons) { const wv = s.weapons[wk]; if (wv && wk !== "flame" && wv.range > range) range = wv.range; }
 
   // 背景：深空漸層
   const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.75);
   bg.addColorStop(0, "#0a1426"); bg.addColorStop(0.55, "#070d18"); bg.addColorStop(1, "#04060c");
   ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+
+  // 星空（閃爍 + 緩慢漂移）
+  ctx.fillStyle = "#9fb3d9";
+  for (const st of STARS) {
+    const tw = 0.25 + 0.45 * (0.5 + 0.5 * Math.sin(g.t * st.sp + st.ph));
+    ctx.globalAlpha = tw;
+    const sx = ((st.x + st.dx * g.t) % 1 + 1) % 1;
+    ctx.beginPath(); ctx.arc(sx * w, st.y * h, st.r, 0, 6.2832); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 
   // 網格
   const R0 = WORLD.spawnR + 0.2, step = 0.4;

@@ -6,7 +6,7 @@ import { WEAPONS } from "../data/weapons.js";
 import { ABILITIES } from "../data/skills.js";
 import { SURVIVAL_SECONDS } from "../data/modes.js";
 import { CRIT_MULT } from "./stats.js";
-import { spawnEnemy, startWave, killEnemy, burst, ringFx, floatText, tagDmg, damageEnemy, mitigate, mitigateDot, chainHit } from "./game.js";
+import { spawnEnemy, startWave, killEnemy, burst, ringFx, floatText, tagDmg, addShake, damageEnemy, mitigate, mitigateDot, chainHit } from "./game.js";
 
 export function rangeOf(s) {
   return Math.min(WORLD.rangeMax, WORLD.rangeBase + s.rangeBonus * WORLD.rangeStep) + (s.rangeFlat || 0);
@@ -28,7 +28,7 @@ export function stepGame(g, s, dt, weapons, io) {
     g.survivalTime -= dt; g.spawnTimer -= dt; g.bossTimer -= dt;
     if (g.spawnTimer <= 0) {
       const elapsed = SURVIVAL_SECONDS - g.survivalTime;
-      if (g.bossTimer <= 0) { spawnEnemy(g, "boss"); g.bossTimer = 20; g.sounds.push("boss"); }
+      if (g.bossTimer <= 0) { spawnEnemy(g, "boss"); g.bossTimer = 20; g.sounds.push("boss"); addShake(g, 9); }
       else spawnEnemy(g, null);
       g.spawnTimer = Math.max(0.12, 0.55 - elapsed * 0.0012);
     }
@@ -39,7 +39,7 @@ export function stepGame(g, s, dt, weapons, io) {
       if (g.spawnTimer <= 0) {
         const boss = g.spawnQueue === 1 && g.wave % 5 === 0;
         spawnEnemy(g, boss ? "boss" : null);
-        if (boss) g.sounds.push("boss");
+        if (boss) { g.sounds.push("boss"); addShake(g, 9); }
         g.spawnQueue--;
         g.spawnTimer = Math.max(0.16, 0.65 - g.wave * 0.01);
       }
@@ -97,11 +97,11 @@ export function stepGame(g, s, dt, weapons, io) {
     if (dist <= rim + 0.012) {
       let armor = s.armor; if (s.fortress && g.hp < g.maxHp * 0.3) armor += 45;
       g.hp -= Math.max(1, e.atk - armor) * s.takeDmgMult;
-      g.sounds.push("hurt");
+      g.sounds.push("hurt"); addShake(g, 6);
       ringFx(g, 0, 0, e.col, WORLD.tower * 2.2, 0.22); burst(g, e.x, e.y, e.col, 6);
       g.enemies.splice(i, 1);
       if (g.hp <= 0) {
-        if (s.immortal && !g.immortalUsed) { g.hp = g.maxHp * 0.35; g.immortalUsed = true; ringFx(g, 0, 0, "#4ade80", WORLD.tower * 5, 0.5); burst(g, 0, 0, "#4ade80", 22); }
+        if (s.immortal && !g.immortalUsed) { g.hp = g.maxHp * 0.35; g.immortalUsed = true; addShake(g, 12); ringFx(g, 0, 0, "#4ade80", WORLD.tower * 5, 0.5); burst(g, 0, 0, "#4ade80", 22); }
         else { g.hp = 0; endRun(g, s, io); }
       }
       continue;
@@ -113,10 +113,10 @@ export function stepGame(g, s, dt, weapons, io) {
     const eb = g.ebullets[i]; eb.x += eb.vx * dt; eb.y += eb.vy * dt; eb.life -= dt;
     if (Math.hypot(eb.x, eb.y) < WORLD.tower + 0.05) {
       let armor = s.armor; if (s.fortress && g.hp < g.maxHp * 0.3) armor += 45;
-      g.hp -= Math.max(1, eb.dmg - armor) * s.takeDmgMult; g.sounds.push("hurt");
+      g.hp -= Math.max(1, eb.dmg - armor) * s.takeDmgMult; g.sounds.push("hurt"); addShake(g, 5);
       ringFx(g, 0, 0, "#fb7185", WORLD.tower * 1.8, 0.18); g.ebullets.splice(i, 1);
       if (g.hp <= 0) {
-        if (s.immortal && !g.immortalUsed) { g.hp = g.maxHp * 0.35; g.immortalUsed = true; ringFx(g, 0, 0, "#4ade80", WORLD.tower * 5, 0.5); burst(g, 0, 0, "#4ade80", 22); }
+        if (s.immortal && !g.immortalUsed) { g.hp = g.maxHp * 0.35; g.immortalUsed = true; addShake(g, 12); ringFx(g, 0, 0, "#4ade80", WORLD.tower * 5, 0.5); burst(g, 0, 0, "#4ade80", 22); }
         else { g.hp = 0; endRun(g, s, io); }
       }
       continue;
@@ -254,13 +254,14 @@ export function stepGame(g, s, dt, weapons, io) {
   for (let i = g.particles.length - 1; i >= 0; i--) { const p = g.particles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; p.vx *= 0.92; p.vy *= 0.92; if (p.life <= 0) g.particles.splice(i, 1); }
   for (let i = g.fx.length - 1; i >= 0; i--) { g.fx[i].life -= dt; if (g.fx[i].life <= 0) g.fx.splice(i, 1); }
   if (g.texts) for (let i = g.texts.length - 1; i >= 0; i--) { const t = g.texts[i]; t.y += t.vy * dt; t.life -= dt; if (t.life <= 0) g.texts.splice(i, 1); }
+  if (g.shake) g.shake = Math.max(0, g.shake - dt * 32); // 螢幕震動衰退
 }
 
 // 結束本局並依模式結算（死亡或生存時間到都走這裡）。
 function endRun(g, s, io) {
   if (g.gameOver) return;
   g.gameOver = true;
-  g.sounds.push("gameover");
+  g.sounds.push("gameover"); addShake(g, 12);
   if (g.mode === "survival") {
     io.reportSurvival(g.kills);
     const gem = Math.floor(g.kills * 0.5 * s.gemYield * g.diff.gem); io.addDiamonds(gem); g.runGems += gem;
@@ -279,7 +280,7 @@ export function triggerAbility(g, s, k) {
   if (k === "frost") { g.buffs.frost = ab.dur; ringFx(g, 0, 0, "#67e8f9", WORLD.spawnR * 0.6, 0.5); }
   if (k === "repair") { g.hp = Math.min(g.maxHp, g.hp + g.maxHp * 0.4); burst(g, 0, 0, "#4ade80", 16); ringFx(g, 0, 0, "#4ade80", WORLD.tower * 4, 0.4); }
   if (k === "nova") {
-    const dmg = s.damage * 6; ringFx(g, 0, 0, "#f43f5e", WORLD.spawnR * 0.55, 0.5);
+    const dmg = s.damage * 6; ringFx(g, 0, 0, "#f43f5e", WORLD.spawnR * 0.55, 0.5); addShake(g, 8);
     for (let i = g.enemies.length - 1; i >= 0; i--) {
       const e = g.enemies[i], dist = Math.hypot(e.x, e.y) || 1;
       e.x += (e.x / dist) * WORLD.novaPush; e.y += (e.y / dist) * WORLD.novaPush;
