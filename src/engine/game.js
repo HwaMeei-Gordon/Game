@@ -3,7 +3,7 @@
 // 這裡不碰 React、不碰畫布；純資料運算，方便測試與閱讀。
 import { DIFF } from "../data/difficulty.js";
 import { CFG, WORLD } from "../data/tuning.js";
-import { ENEMIES, pickType } from "../data/enemies.js";
+import { ENEMIES, pickType, ELITE_AFFIXES } from "../data/enemies.js";
 import { SURVIVAL_SECONDS } from "../data/modes.js";
 
 // 建立一場新遊戲的狀態物件。
@@ -50,13 +50,25 @@ export function spawnEnemy(g, forceType) {
   const atkS = Math.pow(CFG.atkScaleBase, n - 1) * g.diff.edmg;
   const defS = Math.pow(CFG.defScaleBase, n - 1);
   const ang = Math.random() * 6.2832, hp = t.hp * hpS;
-  g.enemies.push({
+  const e = {
     id: g.eid++, x: Math.cos(ang) * WORLD.spawnR, y: Math.sin(ang) * WORLD.spawnR,
     hp, maxHp: hp, sr: t.spd, r: t.r, atk: t.atk * atkS, def: t.def * defS, rw: t.rw,
     col: t.col, shape: t.shape, move: t.move, trait: t.trait, type,
     rot: Math.random() * 6.2832, dashT: Math.random() * 6, weaveDir: Math.random() < 0.5 ? 1 : -1,
     shield: t.trait === "shield" ? hp * 0.6 : 0, maxShield: t.trait === "shield" ? hp * 0.6 : 0,
-  });
+    elite: null, eliteCol: null, eliteRegen: false,
+  };
+  // 菁英詞綴（非首領/碎片，第 6 波起隨機）
+  if (type !== "boss" && type !== "mini" && n >= 6 && Math.random() < Math.min(0.28, 0.04 + n * 0.012)) {
+    const keys = Object.keys(ELITE_AFFIXES), ak = keys[(Math.random() * keys.length) | 0], af = ELITE_AFFIXES[ak];
+    e.elite = ak; e.eliteCol = af.col;
+    if (ak === "frenzy") e.sr *= 1.55;
+    else if (ak === "giant") { e.hp *= 1.7; e.maxHp *= 1.7; e.r *= 1.3; e.sr *= 0.82; e.shield *= 1.7; e.maxShield *= 1.7; }
+    else if (ak === "shielded") { e.shield = e.maxHp * 0.8; e.maxShield = e.maxHp * 0.8; }
+    else if (ak === "regen") e.eliteRegen = true;
+    e.rw = Math.floor(e.rw * 2.2);
+  }
+  g.enemies.push(e);
 }
 
 export function spawnMini(g, x, y, n) {

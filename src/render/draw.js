@@ -112,6 +112,7 @@ export function draw(ctx, g, s, d, camera, weapons) {
     eg.addColorStop(0, "#ffffff"); eg.addColorStop(0.35, e.col); eg.addColorStop(1, shade(e.col, -0.35));
     ctx.fillStyle = eg; drawShape(ctx, e.shape, ex, ey, er, e.rot); ctx.fill();
     ctx.lineWidth = 1.4; ctx.strokeStyle = "rgba(255,255,255,0.5)"; drawShape(ctx, e.shape, ex, ey, er, e.rot); ctx.stroke();
+    if (e.elite) { ctx.save(); ctx.translate(ex, ey); ctx.rotate(g.t * 2); ctx.strokeStyle = e.eliteCol; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(0, 0, er + 6, 0.3, 2.5); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, er + 6, 3.5, 5.7); ctx.stroke(); ctx.restore(); }
     if (e.shield > 0) { ctx.strokeStyle = "rgba(125,211,252,0.9)"; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(ex, ey, er + 5, -1.57, -1.57 + 6.2832 * (e.shield / e.maxShield)); ctx.stroke(); }
     if (e.hp < e.maxHp) {
       const bw = er * 2.2, by = ey - er - 7; ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(ex - bw / 2, by, bw, 3.5);

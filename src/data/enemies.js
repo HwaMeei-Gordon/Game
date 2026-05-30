@@ -23,6 +23,14 @@ export const ENEMIES = {
   mini:     { name: "碎片",   shape: "circle",   hp: 5,  spd: 0.24,  atk: 4,   def: 0,  r: 0.050, rw: 4,  col: "#6ee7b7", move: "straight", trait: null,     info: "分裂體死亡後產生的小型敵人。" },
 };
 
+// 菁英詞綴：部分敵人隨機帶一種強化（更兇、獎勵更多）。
+export const ELITE_AFFIXES = {
+  frenzy:   { name: "狂暴", col: "#f97316" },
+  giant:    { name: "巨大", col: "#a855f7" },
+  shielded: { name: "護盾", col: "#38bdf8" },
+  regen:    { name: "再生", col: "#22c55e" },
+};
+
 // 玩家可在敵人面板查看的種類（不含 mini，因為它是衍生物）。
 export const ENEMY_DEX = ["grunt", "scout", "dasher", "brute", "weaver", "warden", "splitter", "shooter", "healer", "colossus", "boss"];
 

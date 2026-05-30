@@ -60,6 +60,7 @@ export function stepGame(g, s, dt, weapons, io) {
     const e = g.enemies[i], dist = Math.hypot(e.x, e.y) || 1, rim = WORLD.tower + e.r;
     e.rot += dt * 1.4;
     if (e.maxShield > 0 && e.shield < e.maxShield) e.shield = Math.min(e.maxShield, e.shield + e.maxShield * 0.04 * dt);
+    if (e.eliteRegen) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.02 * dt); // 再生菁英
     // 冰霜（全域）+ 火焰減速（個別、短時）
     const slow = frost * (e.slowUntil > g.t ? (1 - (e.slowF || 0)) : 1);
     if (e.move === "kite") {
