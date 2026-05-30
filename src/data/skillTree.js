@@ -98,6 +98,17 @@ export const WEAPON_TREE = {
     { id: "f_slow1",  x: 100,  y: 110, parent: "f_dmg1",  name: "凝滯",   icon: "orb",    cost: 120, bonus: { slow: 2 } },
     { id: "f_slow2",  x: 100,  y: 220, parent: "f_slow1", name: "冰封烈焰",icon: "orb",   cost: 180, bonus: { slow: 2 } },
   ],
+  // 分裂彈：命中分裂 → 傷害暴擊線 / 碎片數線 / 穿透速射線
+  shard: [
+    { id: "sh_dmg1",   x: 0,    y: 0,   parent: null,       name: "裝藥",   icon: "dmg",    cost: 60,  bonus: { dmgM: 0.10 } },
+    { id: "sh_dmg2",   x: -100, y: 110, parent: "sh_dmg1",  name: "強裝藥", icon: "dmg",    cost: 120, bonus: { dmgM: 0.15 } },
+    { id: "sh_crit1",  x: -100, y: 220, parent: "sh_dmg2",  name: "尖銳",   icon: "crit",   cost: 150, bonus: { critC: 0.06 } },
+    { id: "sh_shards1",x: 0,    y: 110, parent: "sh_dmg1",  name: "增片",   icon: "multi",  cost: 130, bonus: { shards: 1 } },
+    { id: "sh_shards2",x: 0,    y: 220, parent: "sh_shards1",name: "霰彈",  icon: "multi",  cost: 170, bonus: { shards: 1 } },
+    { id: "sh_storm",  x: 0,    y: 330, parent: "sh_shards2",name: "碎片風暴",icon: "splash",cost: 260, bonus: { shards: 2 }, special: 1, info: "招牌：碎片數大增，群戰覆蓋面爆炸。" },
+    { id: "sh_pierce1",x: 100,  y: 110, parent: "sh_dmg1",  name: "穿芯",   icon: "pierce", cost: 120, bonus: { pierce: 1 } },
+    { id: "sh_rate1",  x: 100,  y: 220, parent: "sh_pierce1",name: "速裝填",icon: "rate",   cost: 140, bonus: { rateM: 0.12 } },
+  ],
 };
 
 // ── 通用工具（以 tree 陣列 + owned 對照表操作） ──
@@ -134,6 +145,7 @@ export const ARMORY = {
   laser:  { unlock: 150, base: ["dmg"] },
   chain:  { unlock: 150, base: ["dmg", "rate"] },
   flame:  { unlock: 120, base: ["dmg"] },
+  shard:  { unlock: 160, base: ["dmg", "rate"] },
 };
 export const ARMORY_BASE = {
   dmg:  { name: "基礎傷害", icon: "dmg",  per: "+5 傷害" },

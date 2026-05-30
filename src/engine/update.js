@@ -156,7 +156,7 @@ export function stepGame(g, s, dt, weapons, io) {
         } else {
           for (const { e } of inRange.slice(0, ws.multishot)) {
             const a = Math.atan2(e.y, e.x), crit = Math.random() < wcrit;
-            g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: wk, hits: [], spd: bspd, pierce: ws.pierce, splash: ws.splash, splashR: ws.splashRadius });
+            g.bullets.push({ x: 0, y: 0, vx: Math.cos(a) * bspd, vy: Math.sin(a) * bspd, dmg: ws.damage * dm * (crit ? CRIT_MULT : 1), crit, life: 3.4, type: wk, hits: [], spd: bspd, pierce: ws.pierce, splash: ws.splash, splashR: ws.splashRadius, frags: ws.fragCount });
           }
         }
         g.fireCd[wk] = 1 / ws.fireRate;
@@ -184,8 +184,16 @@ export function stepGame(g, s, dt, weapons, io) {
       if ((b.x - e.x) ** 2 + (b.y - e.y) ** 2 < (e.r + WORLD.bulletHit) ** 2) {
         if (b.type === "chain") { chainHit(g, s, b, e); dead = true; break; }
         const dealt = mitigate(b.dmg, e.def);
-        damageEnemy(e, dealt); b.hits.push(e.id); tagDmg(g, b.type, dealt);
+        damageEnemy(e, dealt); b.hits.push(e.id); tagDmg(g, b.type === "frag" ? "shard" : b.type, dealt);
         floatText(g, b.x, b.y, "" + Math.round(dealt), b.crit ? "#ffffff" : "#fde68a", b.crit);
+        if (b.type === "shard") {
+          const n = Math.round(b.frags || 4), fs = (b.spd || WORLD.bulletSpd) * 0.85;
+          for (let f = 0; f < n; f++) {
+            const ang = (f / n) * 6.2832 + Math.random() * 0.4;
+            g.bullets.push({ x: b.x, y: b.y, vx: Math.cos(ang) * fs, vy: Math.sin(ang) * fs, dmg: b.dmg * 0.4, crit: b.crit, life: 0.5, type: "frag", hits: [], spd: fs, pierce: 1 });
+          }
+          ringFx(g, b.x, b.y, "#f0abfc", WORLD.splashR * 0.8, 0.24); burst(g, b.x, b.y, "#f0abfc", 6);
+        }
         if (b.type === "homing") {
           const sr = b.splashR || WORLD.splashR, f = 0.5 + (b.splash || 0);
           ringFx(g, b.x, b.y, "#fbbf24", sr, 0.28);

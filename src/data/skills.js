@@ -24,6 +24,8 @@ export const ITEMS = {
   split:  { name: "分裂", icon: "chain",  base: 120, mult: 1.7, cap: 3, fmt: (l) => `擊殺時額外折射 ${l}（上限3）` },
   // 火焰專屬
   slow:   { name: "減速", icon: "orb",    base: 55, mult: 1.4, cap: 5, fmt: (l) => `灼燒減速 ${Math.min(60, l * 12)}%` },
+  // 分裂彈專屬
+  shards: { name: "碎片", icon: "multi",  base: 55, mult: 1.55, cap: 6, fmt: (l) => `+${l} 碎片` },
   // 防禦類（全塔共用）
   hp:     { name: "生命", icon: "hp",    base: 12, mult: 1.15,          fmt: (l) => `+${l * 30} 生命` },
   regen:  { name: "恢復", icon: "regen", base: 16, mult: 1.18,          fmt: (l) => `+${(l * 1.4).toFixed(1)}/s` },
@@ -40,6 +42,7 @@ export const WEAPON_CATS = {
   laser:  { atk: ["dmg", "wrange", "ltick", "lamp"], sp: ["multi", "crit"] },
   chain:  { atk: ["dmg", "rate", "bspd", "wrange"], sp: ["bounce", "multi", "split", "crit"] },
   flame:  { atk: ["dmg", "frange"],                 sp: ["slow", "crit"] },
+  shard:  { atk: ["dmg", "rate", "bspd", "wrange"], sp: ["shards", "pierce", "crit"] },
 };
 // 每把武器所有可升項目（atk+sp 扁平），供建立狀態用
 export const WEAPON_ITEMS = {};

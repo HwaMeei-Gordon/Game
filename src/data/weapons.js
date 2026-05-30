@@ -13,5 +13,7 @@ export const WEAPONS = {
     desc: "高速彈，命中後在鄰近敵人間彈射（傷害遞減）。可多重發射、擊殺時分裂。清群神器。" },
   flame:  { name: "火焰",   icon: "flame",  dmgF: 0.55, rateF: 1.0,  rangeF: 1.0,  spd: 1,   cont: true,  special: "近身範圍",
     desc: "塔周圍範圍持續灼燒，同時燒多隻。射程短需放敵人逼近，近身清場強。" },
+  shard:  { name: "分裂彈", icon: "splash", dmgF: 0.8,  rateF: 0.95, rangeF: 1.05, spd: 1.9, cont: false, special: "命中分裂",
+    desc: "命中後炸成數片碎片向四周飛散，每片造成傷害。特性為碎片數，群戰覆蓋面廣。" },
 };
 export const DEFAULT_WEAPON = "cannon";

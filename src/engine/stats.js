@@ -71,6 +71,8 @@ export function derive(meta, skill) {
       maxSplit: Math.min(3, (ws.split || 0) + Wt("split")),
       // 火焰：減速幅度（移速扣除比例）
       flameSlow: Math.min(0.6, ((ws.slow || 0) + Wt("slow")) * 0.12),
+      // 分裂彈：命中時迸出的碎片數
+      fragCount: 4 + (ws.shards || 0) + Wt("shards"),
     };
   }
   out.range = baseRange; // 代表射程（畫面外圈參考）
