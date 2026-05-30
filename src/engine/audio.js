@@ -32,7 +32,6 @@ function blip(freq, dur, type = "square", vol = 0.3, when = 0, dest = null) {
 }
 
 const SFX = {
-  shoot:    () => blip(880, 0.04, "square", 0.12),
   kill:     () => { blip(523, 0.07, "square", 0.22); blip(784, 0.06, "square", 0.18, 0.04); },
   bosskill: () => { blip(196, 0.16, "sawtooth", 0.3); blip(330, 0.14, "square", 0.24, 0.08); blip(523, 0.18, "square", 0.22, 0.16); },
   hurt:     () => blip(150, 0.14, "sawtooth", 0.32),
